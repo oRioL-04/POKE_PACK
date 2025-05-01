@@ -39,6 +39,11 @@ class MainController {
         render(view: "cartasPorColeccion", model: [cards: userCards, setId: setId, currentUser: user])
     }
 
+    def error() {
+        flash.message = "No tienes suficiente saldo para abrir un sobre."
+        render(view: "error")
+    }
+
     def abrirSobres() {
         def user = User.get(session.userId)
         def url = "https://api.pokemontcg.io/v2/sets"
@@ -62,8 +67,7 @@ class MainController {
         def sobreCosto = 50.0
 
         if (user.saldo < sobreCosto) {
-            flash.message = "No tienes suficiente saldo para abrir este sobre."
-            redirect(action: "error")
+            redirect(controller: "main", action: "error")
             return
         }
 
