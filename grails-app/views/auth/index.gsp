@@ -1,5 +1,5 @@
 <meta name="layout" content="main"/>
-<h2 class="page-title">Registro</h2>
+<h2 class="page-title">Iniciar Sesión</h2>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -45,17 +45,22 @@
         background-color: #ef5350;
         color: white;
     }
-    label {
-        font-weight: bold;
-        color: #555;
+    a {
+        display: block;
+        margin-top: 10px;
+        text-align: center;
+        color: #ef5350;
+        text-decoration: none;
+        font-size: 1rem;
     }
 </style>
 <div class="login-form">
-    <g:form action="saveUser">
+    <g:form action="login">
         <label>Usuario:</label><br/>
         <input type="text" name="username" placeholder="Ingresa tu usuario"/><br/>
         <label>Contraseña:</label><br/>
         <input type="password" name="password" placeholder="Ingresa tu contraseña"/><br/>
-        <input type="submit" value="Registrar"/>
+        <input type="submit" value="Ingresar"/>
     </g:form>
+    <a href="${createLink(action: 'register')}">¿No tienes cuenta? Regístrate</a>
 </div>

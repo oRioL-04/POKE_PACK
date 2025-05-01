@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title><g:layoutTitle default="Pokémon App"/></title>
     <style>
-
     body {
         font-family: 'Poppins', sans-serif;
         background: linear-gradient(to bottom, #83a4d4, #b6fbff);
@@ -97,6 +96,13 @@
         }
     }
     </style>
+
+    <!-- Inyección del servicio para acceder al usuario de forma segura -->
+
+
+    <!-- Obtener el usuario actual desde el servicio -->
+    <g:set var="currentUser" value="${userService.getCurrentUser(session)}"/>
+
     <g:layoutHead/>
 </head>
 
@@ -105,19 +111,28 @@
 <nav class="navbar">
     <div class="navbar-container">
         <div class="nav-links">
-            <g:if test="${session.user}">
+            <g:if test="${currentUser}">
                 <g:link controller="home" action="index">Inicio</g:link>
                 <g:link controller="pack" action="openPack">Abrir Sobre</g:link>
                 <g:link controller="home" action="pokedex">Mi Pokédex</g:link>
             </g:if>
         </div>
 
-        <g:if test="${session.user}">
+        <g:if test="${currentUser}">
             <div class="user-info">
-                <span class="username">${session.user.username}</span>
-                <g:link controller="auth" action="logout">Cerrar Sesión</g:link>
+                <span class="username">${currentUser.username}</span>
+                <span class="saldo">
+                    <img src="/images/moneda.png" alt="Pokémoneda" style="height: 20px; vertical-align: middle; margin-left: 10px;"/>
+                    ${currentUser.saldo} Pokémonedas
+                </span>
+                <g:link controller="auth" action="logout" style="margin-left: 15px;">Cerrar Sesión</g:link>
             </div>
         </g:if>
+        <g:else>
+            <div class="user-info">
+                <g:link controller="auth" action="index">Iniciar Sesión</g:link>
+            </div>
+        </g:else>
     </div>
 </nav>
 
