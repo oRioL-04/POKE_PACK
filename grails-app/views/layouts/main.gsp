@@ -97,17 +97,10 @@
     }
     </style>
 
-    <!-- Inyección del servicio para acceder al usuario de forma segura -->
-
-
-    <!-- Obtener el usuario actual desde el servicio -->
-    <g:set var="currentUser" value="${userService.getCurrentUser(session)}"/>
-
     <g:layoutHead/>
 </head>
 
 <body>
-<!-- Barra de navegación superior -->
 <nav class="navbar">
     <div class="navbar-container">
         <div class="nav-links">
@@ -122,8 +115,8 @@
             <div class="user-info">
                 <span class="username">${currentUser.username}</span>
                 <span class="saldo">
-                    <img src="/images/moneda.png" alt="Pokémoneda" style="height: 20px; vertical-align: middle; margin-left: 10px;"/>
-                    ${currentUser.saldo} Pokémonedas
+                    <img src="${resource(dir: 'images', file: 'moneda.png')}" alt="Pokémoneda" style="height: 20px; vertical-align: middle; margin-left: 10px;"/>
+                    ${session.user?.saldo}
                 </span>
                 <g:link controller="auth" action="logout" style="margin-left: 15px;">Cerrar Sesión</g:link>
             </div>
@@ -136,12 +129,10 @@
     </div>
 </nav>
 
-<!-- Contenido principal -->
 <div class="main-content">
     <g:layoutBody/>
 </div>
 
-<!-- Pie de página -->
 <footer class="footer-nav">
     <div>© 2023 Pokémon App - Todos los derechos reservados</div>
 </footer>
