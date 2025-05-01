@@ -62,5 +62,5 @@
         <input type="password" name="password" placeholder="Ingresa tu contraseña"/><br/>
         <input type="submit" value="Ingresar"/>
     </g:form>
-    <a href="${createLink(action: 'register')}">¿No tienes cuenta? Regístrate</a>
+    <a href="${createLink(controller: 'auth', action: 'register')}">¿No tienes cuenta? Regístrate</a>
 </div>

@@ -4,35 +4,43 @@ class AuthController {
 
     def index() {
         render(view: "index")
-        log.info("Usuario en sesión: ${session.user}")
-    }
-
-    def login() {
-        def user = User.findByUsernameAndPassword(params.username, params.password)
-        if (user) {
-            session.user = user
-            session.userId = user.id
-            redirect(controller: "Main", action: "menu")
-        } else {
-            flash.message = "Usuario o contraseña incorrectos"
-            redirect(action: "index")
-        }
     }
 
     def register() {
         render(view: "register")
     }
 
-    def saveUser() {
-        def user = new User(username: params.username, password: params.password)
-        if (user.save(flush: true)) {
-            session.user = user
+    def saveUser(String username, String password) {
+        if (username && password) {
+            def existingUser = User.findByUsername(username)
+            if (existingUser) {
+                flash.message = "El usuario ya existe"
+                redirect(action: "register")
+                return
+            }
+
+            def user = new User(username: username, password: password, saldo: 100.0)
+            if (user.save(flush: true, failOnError: true)) {
+                flash.message = "Usuario registrado exitosamente"
+                redirect(action: "index")
+            } else {
+                flash.message = "Error al registrar el usuario"
+                redirect(action: "register")
+            }
+        } else {
+            flash.message = "Todos los campos son obligatorios"
+            redirect(action: "register")
+        }
+    }
+
+    def login(String username, String password) {
+        def user = User.findByUsernameAndPassword(username, password)
+        if (user) {
             session.userId = user.id
             redirect(controller: "Main", action: "menu")
-            log.info("Usuario en sesión: ${session.user}")
         } else {
-            flash.message = "Error al registrar usuario"
-            redirect(action: "register")
+            flash.message = "Credenciales incorrectas"
+            redirect(action: "index")
         }
     }
 
