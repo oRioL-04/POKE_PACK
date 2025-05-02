@@ -5,11 +5,15 @@ class AllCards {
     String name
     String imageUrl
     String setName
+    String rarity
+    String cardNumber
 
     static constraints = {
-        cardId unique: true, blank: false
+        cardId blank: false
         name blank: false
         imageUrl nullable: true
         setName blank: false
+        rarity nullable: true // Puede ser nulo si no se proporciona
+        cardNumber nullable: true
     }
 }

@@ -116,7 +116,7 @@
                 <span class="username">${currentUser.username}</span>
                 <span class="saldo">
                     <img src="${resource(dir: 'images', file: 'moneda.png')}" alt="Pokémoneda" style="height: 20px; vertical-align: middle; margin-left: 10px;"/>
-                    ${session.user?.saldo}
+                    ${currentUser?.saldo}
                 </span>
                 <g:link controller="auth" action="logout" style="margin-left: 15px;">Cerrar Sesión</g:link>
             </div>

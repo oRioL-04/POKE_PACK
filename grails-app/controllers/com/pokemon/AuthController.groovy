@@ -19,7 +19,7 @@ class AuthController {
                 return
             }
 
-            def user = new User(username: username, password: password, saldo: 100.0)
+            def user = new User(username: username, password: password)
             if (user.save(flush: true, failOnError: true)) {
                 flash.message = "Usuario registrado exitosamente"
                 redirect(action: "index")

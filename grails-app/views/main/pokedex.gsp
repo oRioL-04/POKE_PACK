@@ -7,17 +7,25 @@
     gap: 20px;
     padding: 20px;
 }
-.set-card {
-    background-color: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    text-align: center;
-}
 .set-card img {
     width: 100%;
     height: 150px;
     object-fit: contain;
+}.set-card {
+     background-color: white;
+     padding: 20px;
+     border-radius: 10px;
+     box-shadow: 0 0 10px rgba(0,0,0,0.1);
+     text-align: center;
+     display: flex;
+     flex-direction: column;
+     justify-content: space-between;
+     height: 250px; /* Ajustamos la altura para evitar solapamientos */
+ }
+.set-card small {
+    margin-top: auto; /* Asegura que el porcentaje esté al final */
+    color: #666;
+    font-size: 0.9rem;
 }
 .set-card a {
     margin-top: 10px;
@@ -27,12 +35,6 @@
     text-decoration: none;
     font-weight: bold;
     color: #333;
-}
-.set-card small {
-    display: block;
-    margin-top: 10px;
-    color: #666;
-    font-size: 0.9rem;
 }
 </style>
 <div class="grid">

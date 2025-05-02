@@ -6,6 +6,7 @@ class User {
     Integer saldo = 2000 // Saldo inicial de Pokémonedas
 
     static hasMany = [cards: Card]
+    static mappedBy = [cards: 'owner']
 
     static constraints = {
         username unique: true
