@@ -26,22 +26,25 @@
         transform: scale(1.05);
         box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
     }
-    .card p {
-        font-size: 1.1rem;
-        font-weight: bold;
-        margin: 5px 0;
+    .card.rare {
+        border: 2px solid gold;
+        animation: glow 1s infinite alternate;
     }
-    .card small {
-        color: #666;
-        font-size: 0.9rem;
+    @keyframes glow {
+        from {
+            box-shadow: 0 0 10px gold;
+        }
+        to {
+            box-shadow: 0 0 20px gold;
+        }
     }
 </style>
 <div class="cards-container">
     <g:each in="${cards}" var="card">
-        <div class="card">
-            <img src="${card.images.small}" alt="${card.name}"/>
+        <div class="card ${card?.rarity == 'Common' ? '' : 'rare'}">
+            <img src="${card.imageUrl ?: '/images/default.png'}" alt="${card.name}"/>
             <p>${card.name}</p>
-            <small>${card.setName}</small>
+            <small>${set?.name}</small>
         </div>
     </g:each>
 </div>

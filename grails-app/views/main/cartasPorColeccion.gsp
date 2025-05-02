@@ -6,31 +6,33 @@
 --%>
 
 <meta name="layout" content="main"/>
-<h2>Cartas de la colección: ${setId}</h2>
+<h2>Cartas en la colección ${set.name}</h2>
 <style>
-    .cards-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 15px;
-        padding: 20px;
-    }
-    .card {
-        text-align: center;
-        background: #fff;
-        border-radius: 8px;
-        padding: 10px;
-        box-shadow: 0 0 5px #ccc;
-    }
-    .card img {
-        height: 120px;
-    }
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+.set-card {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    text-align: center;
+}
+.set-card img {
+    width: 100%;
+    height: 150px;
+    object-fit: contain;
+}
 </style>
-<div class="cards-container">
+<div class="grid">
     <g:each in="${cards}" var="card">
-        <div class="card">
-            <img src="${card.imageUrl}" alt="${card.name}"/>
+        <div class="set-card">
+            <img src="${card.imageUrl}" alt="${card.name}" onerror="this.src='/images/default.png'"/>
             <p>${card.name}</p>
+            <p>Cantidad: ${card.quantity}</p>
         </div>
     </g:each>
 </div>
-<g:link controller="Main" action="pokedex">Volver a la Pokédex</g:link>
