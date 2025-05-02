@@ -1,5 +1,7 @@
 package com.pokemon
 
+import grails.converters.JSON
+
 class MainController {
 
     def menu() {
@@ -93,6 +95,7 @@ class MainController {
         def cartasCruzadas = obtenerCartasPorColeccion(setId)
         render(view: "cartasPorColeccion", model: [cards: cartasCruzadas, set: set, currentUser: user])
     }
+
     def abrirSobres() {
         def user = User.get(session.userId)
         if (!user) {
@@ -100,17 +103,16 @@ class MainController {
             return
         }
 
-        // Verifica si la base de datos de sets está vacía
         if (Set.count() == 0) {
-            syncCollectionsFromApi() // Sincroniza las colecciones desde la API
+            syncCollectionsFromApi()
         }
 
-        // Obtén los sets directamente desde la base de datos
-        def sets = Set.list().collect { set ->
+        def sets = Set.list(sort: "isFavorite", order: "desc").collect { set ->
             [
                 id: set.setId,
                 name: set.name,
-                logoUrl: set.logoUrl ?: '/images/default.png'
+                logoUrl: set.logoUrl ?: '/images/default.png',
+                isFavorite: set.isFavorite
             ]
         }
 
@@ -240,5 +242,25 @@ class MainController {
         return cartasCruzadas
     }
 
+    def toggleFavorite() {
+        def requestBody = request.JSON
+        def setId = requestBody?.setId
+
+        if (!setId) {
+            render([success: false, message: "Set ID no proporcionado"] as JSON)
+            return
+        }
+
+        def set = Set.findBySetId(setId)
+        if (!set) {
+            render([success: false, message: "Set no encontrado"] as JSON)
+            return
+        }
+
+        set.isFavorite = !set.isFavorite
+        set.save(flush: true, failOnError: true)
+
+        render([success: true, isFavorite: set.isFavorite] as JSON)
+    }
 
 }

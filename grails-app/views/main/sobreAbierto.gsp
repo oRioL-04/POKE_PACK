@@ -73,7 +73,7 @@
             <img src="${card.imageUrl ?: '/images/default.png'}" alt="${card.name}" class="clickable-image"/>
             <p>${card.name}</p>
             <small>${set?.name}</small>
-            <small>Rareza: ${card.rarity ?: 'Desconocida'}</small>
+            <small>Rareza: ${card.rarity ?: 'Energia'}</small>
         </div>
     </g:each>
 </div>

@@ -7,6 +7,9 @@
     gap: 20px;
     padding: 20px;
 }
+.favorite-button.active {
+    color: gold;
+}
 .set-card {
     background-color: white;
     padding: 20px;
@@ -28,6 +31,16 @@
     font-weight: bold;
     color: #333;
 }
+.favorite-button {
+    font-size: 24px;
+    color: gray;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+
 </style>
 <div class="grid">
     <g:each in="${sets}" var="set">
@@ -36,9 +49,40 @@
             <p>${set.name}</p>
             <p>Costo: 50 Pokémonedas</p>
             <g:link action="abrirSobre" params="[setId: set.id]"
-                onclick="return confirm('¿Estás seguro de que deseas abrir un sobre de la colección ${set.name}?')">
+                    onclick="return confirm('¿Estás seguro de que deseas abrir un sobre de la colección ${set.name}?')">
                 Abrir sobre
             </g:link>
+            <!-- grails-app/views/main/sobres.gsp -->
+            <button
+                data-set-id="${set.id}"
+                onclick="toggleFavorite(this)"
+                class="favorite-button ${set.isFavorite ? 'active' : ''}">
+                ★
+            </button>
         </div>
     </g:each>
 </div>
+
+<script>
+    // Script en sobres.gsp
+    function toggleFavorite(button) {
+        const setId = button.getAttribute('data-set-id'); // Obtener el setId del atributo
+        fetch(`/main/toggleFavorite`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ setId }) // Enviar setId en el cuerpo
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    button.classList.toggle('active', data.isFavorite); // Cambiar color
+                    location.reload(); // Recargar la página para actualizar el orden
+                } else {
+                    alert(data.message || 'Error al actualizar el favorito.');
+                }
+            })
+            .catch(() => alert('Error al conectar con el servidor.'));
+    }
+</script>
