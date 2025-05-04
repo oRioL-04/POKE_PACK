@@ -108,6 +108,7 @@
                 <g:link controller="main" action="menu">Inicio</g:link>
                 <g:link controller="main" action="abrirSobres">Abrir Sobre</g:link>
                 <g:link controller="main" action="pokedex">Mi Pokédex</g:link>
+                <g:link controller="battle" action="selectTeam">Combate</g:link>
             </g:if>
         </div>
 

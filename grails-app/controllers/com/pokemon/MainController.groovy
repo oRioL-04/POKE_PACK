@@ -13,45 +13,58 @@ class MainController {
         render(view: "menu", model: [currentUser: currentUser])
     }
     def syncCollectionsFromApi() {
-        def apiUrl = "https://api.pokemontcg.io/v2/sets" // URL de la API para obtener los sets
-        def connection = new URL(apiUrl).openConnection()
-        connection.setRequestProperty("X-Api-Key", "218f5856-a28b-44c8-9809-43e51bbeeefc") // Clave de API
-        def json = new groovy.json.JsonSlurper().parse(connection.getInputStream())
+        try {
+            def apiUrl = "https://api.pokemontcg.io/v2/sets"
+            def connection = new URL(apiUrl).openConnection()
+            connection.setRequestProperty("X-Api-Key", "218f5856-a28b-44c8-9809-43e51bbeeefc")
+            def json = new groovy.json.JsonSlurper().parse(connection.getInputStream())
 
-        json.data.each { apiSet ->
-            def existingSet = Set.findBySetId(apiSet.id)
-            if (!existingSet) {
-                def newSet = new Set(
-                    setId: apiSet.id,
-                    name: apiSet.name,
-                    logoUrl: apiSet.images?.logo,
-                    totalCards: apiSet.total
-                )
-                newSet.save(flush: true, failOnError: true)
+            json.data.each { apiSet ->
+                try {
+                    def existingSet = Set.findBySetId(apiSet.id)
+                    if (!existingSet) {
+                        def newSet = new Set(
+                            setId: apiSet.id,
+                            name: apiSet.name,
+                            logoUrl: apiSet.images?.logo,
+                            totalCards: apiSet.total
+                        )
+                        newSet.save(flush: true, failOnError: true)
+                    }
+                } catch (Exception e) {
+                    log.error("Error saving set with ID ${apiSet.id}: ${e.message}", e)
+                }
             }
-        }
 
-        // Sincronizar las cartas después de los sets
-        def cardsApiUrl = "https://api.pokemontcg.io/v2/cards"
-        def cardsConnection = new URL(cardsApiUrl).openConnection()
-        cardsConnection.setRequestProperty("X-Api-Key", "218f5856-a28b-44c8-9809-43e51bbeeefc")
-        def cardsJson = new groovy.json.JsonSlurper().parse(cardsConnection.getInputStream())
+            // Sincronizar las cartas después de los sets
+            def cardsApiUrl = "https://api.pokemontcg.io/v2/cards"
+            def cardsConnection = new URL(cardsApiUrl).openConnection()
+            cardsConnection.setRequestProperty("X-Api-Key", "218f5856-a28b-44c8-9809-43e51bbeeefc")
+            def cardsJson = new groovy.json.JsonSlurper().parse(cardsConnection.getInputStream())
 
-        cardsJson.data.each { apiCard ->
-            def existingCard = AllCards.findByCardId(apiCard.id)
-            if (!existingCard) {
-                def newCard = new AllCards(
-                    cardId: apiCard.id,
-                    name: apiCard.name,
-                    imageUrl: apiCard.images?.small,
-                    setName: apiCard.set?.name,
-                    rarity: apiCard.rarity
-                )
-                newCard.save(flush: true, failOnError: true)
+            cardsJson.data.each { apiCard ->
+                try {
+                    def existingCard = AllCards.findByCardId(apiCard.id)
+                    if (!existingCard) {
+                        def newCard = new AllCards(
+                            cardId: apiCard.id,
+                            name: apiCard.name,
+                            imageUrl: apiCard.images?.small,
+                            setName: apiCard.set?.name,
+                            rarity: apiCard.rarity
+                        )
+                        newCard.save(flush: true, failOnError: true)
+                    }
+                } catch (Exception e) {
+                    log.error("Error saving card with ID ${apiCard.id}: ${e.message}", e)
+                }
             }
-        }
 
-        flash.message = "Sets y cartas sincronizados correctamente desde la API."
+            flash.message = "Sets y cartas sincronizados correctamente desde la API."
+        } catch (Exception e) {
+            log.error("Error syncing collections from API: ${e.message}", e)
+            flash.message = "Error al sincronizar los sets y cartas desde la API."
+        }
         redirect(action: "menu")
     }
 
@@ -149,14 +162,16 @@ class MainController {
         def user = User.get(session.userId)
         def sobreCosto = 50.0
 
-        if (user.saldo < sobreCosto) {
-            redirect(controller: "main", action: "error")
+        if (!user) {
+            redirect(controller: "Auth", action: "index")
             return
         }
 
-        user.saldo -= sobreCosto
-        user.save(flush: true, failOnError: true)
-        session.user = user
+        if (user.saldo < sobreCosto) {
+            flash.message = "No tienes suficiente saldo para abrir un sobre."
+            redirect(action: "abrirSobres")
+            return
+        }
 
         def set = Set.findBySetId(setId)
         if (!set) {
@@ -165,10 +180,18 @@ class MainController {
             return
         }
 
+        // Verificar si las cartas del set están en la base de datos
         def cartasDelSet = AllCards.findAllBySetName(set.name)
         if (!cartasDelSet || cartasDelSet.isEmpty()) {
-            cargarCartasDeSet(setId)
-            cartasDelSet = AllCards.findAllBySetName(set.name)
+            try {
+                cargarCartasDeSet(setId) // Llamada a la API para cargar las cartas
+                cartasDelSet = AllCards.findAllBySetName(set.name)
+            } catch (Exception e) {
+                log.error("Error al cargar cartas desde la API para el set ${setId}: ${e.message}", e)
+                flash.message = "No se pudieron cargar las cartas del set desde la API."
+                redirect(action: "abrirSobres")
+                return
+            }
         }
 
         if (!cartasDelSet || cartasDelSet.isEmpty()) {
@@ -197,6 +220,11 @@ class MainController {
         // Combinar las cartas seleccionadas
         def cartasSeleccionadas = cartasComunesSeleccionadas + cartaRara
 
+        // Actualizar el saldo del usuario
+        user.saldo -= sobreCosto
+        user.save(flush: true, failOnError: true)
+
+        // Guardar las cartas en la colección del usuario
         cartasSeleccionadas.each { cardData ->
             def existingCard = user.cards?.find { it.cardId == cardData.cardId }
             if (existingCard) {
@@ -263,4 +291,42 @@ class MainController {
         render([success: true, isFavorite: set.isFavorite] as JSON)
     }
 
+    def cargarTodasLasCartas() {
+        try {
+            def apiUrl = "https://api.pokemontcg.io/v2/cards"
+            def page = 1
+            def pageSize = 250
+            def totalCount = 0
+
+            do {
+                def connection = new URL("${apiUrl}?page=${page}&pageSize=${pageSize}").openConnection()
+                connection.setRequestProperty("X-Api-Key", "218f5856-a28b-44c8-9809-43e51bbeeefc")
+                def json = new groovy.json.JsonSlurper().parse(connection.getInputStream())
+
+                totalCount = json.totalCount
+                json.data.each { apiCard ->
+                    def existingCard = AllCards.findByCardId(apiCard.id)
+                    if (!existingCard) {
+                        def newCard = new AllCards(
+                            cardId: apiCard.id,
+                            name: apiCard.name,
+                            imageUrl: apiCard.images?.small,
+                            setName: apiCard.set?.name,
+                            rarity: apiCard.rarity,
+                            cardNumber: apiCard.number
+                        )
+                        newCard.save(flush: true, failOnError: true)
+                    }
+                }
+
+                page++
+            } while ((page - 1) * pageSize < totalCount)
+
+            flash.message = "Todas las cartas se han cargado correctamente en la base de datos."
+        } catch (Exception e) {
+            log.error("Error al cargar todas las cartas: ${e.message}", e)
+            flash.message = "Error al cargar las cartas desde la API."
+        }
+        redirect(action: "menu")
+    }
 }
