@@ -43,6 +43,5 @@
 <ul>
     <li><g:link controller="Main" action="pokedex">Ver Pokédex</g:link></li>
     <li><g:link controller="Main" action="abrirSobres">Abrir sobres</g:link></li>
-    <li><g:link controller="Auth" action="logout">Cerrar sesión</g:link></li>
     <li><g:link controller="Battle" action="selectTeam">Combate</g:link></li>
 </ul>

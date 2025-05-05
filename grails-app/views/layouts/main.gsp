@@ -135,7 +135,7 @@
 </div>
 
 <footer class="footer-nav">
-    <div>© 2023 Pokémon App - Todos los derechos reservados</div>
+    <div>© 2025 Pokémon App - Todos los derechos reservados</div>
 </footer>
 </body>
 </html>
