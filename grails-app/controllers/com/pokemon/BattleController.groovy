@@ -21,6 +21,44 @@ class BattleController {
         render(view: "/battle/selectSet", model: [sets: sets, currentUser: user])
     }
 
+    def selectCards(String setId) {
+        def user = User.get(session.userId)
+        if (!user) {
+            redirect(controller: "Auth", action: "index")
+            return
+        }
+
+        if (!setId) {
+            flash.message = "No se ha seleccionado una colección."
+            redirect(action: "selectTeam")
+            return
+        }
+
+        def setName = Set.findBySetId(setId)?.name
+        if (!setName) {
+            flash.message = "Colección no encontrada."
+            redirect(action: "selectTeam")
+            return
+        }
+
+        def userCards = Card.findAllByOwnerAndSetName(user, setName)
+        if (!userCards) {
+            flash.message = "No tienes cartas de esta colección."
+            redirect(action: "selectTeam")
+            return
+        }
+
+        def userCardsData = userCards.collect { card ->
+            [
+                cardId: card.cardId,
+                name: card.name,
+                imageUrl: card.imageUrl ?: "/images/default-pokemon.png"
+            ]
+        }
+
+        render(view: "/battle/selectCards", model: [userCards: userCardsData, setId: setId, currentUser: user])
+    }
+
     def startBattle(String setId, String selectedCards) {
         if (!selectedCards) {
             flash.message = "Debes seleccionar exactamente 4 Pokémon."
@@ -36,13 +74,20 @@ class BattleController {
         }
 
         def apiUrl = "https://api.pokemontcg.io/v2/cards"
-        def userTeam = selectedCardIds.collect { cardId ->
+        def userTeam = []
+        for (cardId in selectedCardIds) {
             def combatCard = CombatCard.findByCardId(cardId)
             if (!combatCard) {
                 def connection = new URL("$apiUrl/$cardId").openConnection()
                 connection.setRequestProperty("X-Api-Key", "218f5856-a28b-44c8-9809-43e51bbeeefc")
                 def json = new groovy.json.JsonSlurper().parse(connection.getInputStream())
 
+                if (json.data.supertype != "Pokémon") {
+                    flash.message = "La carta seleccionada (${json.data.name}) no es del tipo Pokémon."
+                    render(view: "/battle/selectCards", model: [setId: setId, userCards: Card.findAllByOwnerAndSetName(User.get(session.userId), Set.findBySetId(setId)?.name)])
+                    return
+                }
+
                 combatCard = new CombatCard(
                     cardId: json.data.id,
                     name: json.data.name ?: "Nombre desconocido",
@@ -53,31 +98,40 @@ class BattleController {
                             name: attack.name ?: "Ataque desconocido",
                             damage: attack.damage?.replaceAll("[^0-9]", "")?.isInteger() ? attack.damage.replaceAll("[^0-9]", "").toInteger() : 10
                         ]
-                    } ?: [[name: "Ataque básico", damage: 10]]
+                    } ?: [[name: "Ataque básico", damage: 10]],
+                    supertype: json.data.supertype,
+                    weaknesses: json.data.weaknesses?.collect { weakness ->
+                        [
+                            type: weakness.type,
+                            value: weakness.value
+                        ]
+                    }
                 )
                 combatCard.save(flush: true, failOnError: true)
             }
-            combatCard
+            userTeam << combatCard
         }
 
-        // Obtener todas las cartas del set y filtrarlas por hp > 0
         def set = Set.findBySetId(setId)
         def allCardsInSet = AllCards.findAllBySetName(set.name).findAll { card ->
             def combatCard = CombatCard.findByCardId(card.cardId)
             combatCard?.hp > 0 || (card.rarity != null && card.rarity != "Common")
         }
-        Collections.shuffle(allCardsInSet) // Mezclar las cartas del set
+        Collections.shuffle(allCardsInSet)
 
-        // Seleccionar 4 cartas aleatorias para la IA
-        def randomIaCards = allCardsInSet.take(4)
-
-        def iaCards = randomIaCards.collect { card ->
+        def iaCards = []
+        while (iaCards.size() < 4) {
+            def card = allCardsInSet.pop()
             def combatCard = CombatCard.findByCardId(card.cardId)
             if (!combatCard) {
                 def connection = new URL("$apiUrl/${card.cardId}").openConnection()
                 connection.setRequestProperty("X-Api-Key", "218f5856-a28b-44c8-9809-43e51bbeeefc")
                 def json = new groovy.json.JsonSlurper().parse(connection.getInputStream())
 
+                if (json.data.supertype != "Pokémon") {
+                    continue
+                }
+
                 combatCard = new CombatCard(
                     cardId: json.data.id,
                     name: json.data.name ?: "Nombre desconocido",
@@ -88,11 +142,18 @@ class BattleController {
                             name: attack.name ?: "Ataque desconocido",
                             damage: attack.damage?.replaceAll("[^0-9]", "")?.isInteger() ? attack.damage.replaceAll("[^0-9]", "").toInteger() : 10
                         ]
-                    } ?: [[name: "Ataque básico", damage: 10]]
+                    } ?: [[name: "Ataque básico", damage: 10]],
+                    supertype: json.data.supertype,
+                    weaknesses: json.data.weaknesses?.collect { weakness ->
+                        [
+                            type: weakness.type,
+                            value: weakness.value
+                        ]
+                    }
                 )
                 combatCard.save(flush: true, failOnError: true)
             }
-            combatCard
+            iaCards << combatCard
         }
 
         session.battle = [
@@ -119,7 +180,6 @@ class BattleController {
             return
         }
 
-        // Deserialize attacks for user and IA Pokémon
         battle.userTeam.each { pokemon ->
             if (pokemon.attacks instanceof String) {
                 pokemon.attacks = new groovy.json.JsonSlurper().parseText(pokemon.attacks)
@@ -141,42 +201,6 @@ class BattleController {
         render(view: "battle", model: [battle: battle, currentUser: user])
     }
 
-    def selectCards(String setId) {
-        if (!setId) {
-            flash.message = "No se ha seleccionado una colección."
-            redirect(action: "selectTeam")
-            return
-        }
-
-        def user = User.get(session.userId)
-        if (!user) {
-            redirect(controller: "Auth", action: "index")
-            return
-        }
-
-        def userCards = user.cards.findAll { it.setName == Set.findBySetId(setId)?.name }
-        if (!userCards) {
-            flash.message = "No tienes cartas de esta colección."
-            redirect(action: "selectTeam")
-            return
-        }
-
-        def apiUrl = "https://api.pokemontcg.io/v2/cards"
-        def userCardsData = userCards.collect { card ->
-            def connection = new URL("$apiUrl/${card.cardId}").openConnection()
-            connection.setRequestProperty("X-Api-Key", "218f5856-a28b-44c8-9809-43e51bbeeefc")
-            def json = new groovy.json.JsonSlurper().parse(connection.getInputStream())
-
-            [
-                cardId: card.cardId,
-                name: json.name ?: card.name,
-                imageUrl: json.images?.small ?: card.imageUrl
-            ]
-        }
-
-        render(view: "/battle/selectCards", model: [userCards: userCardsData, setId: setId])
-    }
-
     def attack(String attackName) {
         def battle = session.battle
         if (!battle) {
@@ -184,7 +208,6 @@ class BattleController {
             return
         }
 
-        // User's attack
         def userAttack = battle.userTeam[battle.currentUserPokemon].attacks.find { it.name == attackName }
         if (!userAttack) {
             flash.message = "Ataque no válido."
@@ -195,7 +218,6 @@ class BattleController {
         battle.iaTeam[battle.currentIaPokemon].hp -= userAttack.damage
         battle.history << "${battle.userTeam[battle.currentUserPokemon].name} usó ${attackName} e hizo ${userAttack.damage} de daño."
 
-        // Check if IA Pokémon is defeated
         if (battle.iaTeam[battle.currentIaPokemon].hp <= 0) {
             battle.history << "${battle.userTeam[battle.currentUserPokemon].name} derrotó a ${battle.iaTeam[battle.currentIaPokemon].name}."
             battle.currentIaPokemon++
@@ -207,16 +229,11 @@ class BattleController {
                 return
             }
         } else {
-            // Pause before IA attack
-            sleep(500) // 1-second delay
-
-            // IA's random attack
             def iaAttacks = battle.iaTeam[battle.currentIaPokemon].attacks
             def iaAttack = iaAttacks[new Random().nextInt(iaAttacks.size())]
             battle.userTeam[battle.currentUserPokemon].hp -= iaAttack.damage
             battle.history << "${battle.iaTeam[battle.currentIaPokemon].name} usó ${iaAttack.name} e hizo ${iaAttack.damage} de daño."
 
-            // Check if user's Pokémon is defeated
             if (battle.userTeam[battle.currentUserPokemon].hp <= 0) {
                 battle.history << "${battle.iaTeam[battle.currentIaPokemon].name} derrotó a ${battle.userTeam[battle.currentUserPokemon].name}."
                 battle.currentUserPokemon++

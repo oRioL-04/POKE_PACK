@@ -180,11 +180,10 @@ class MainController {
             return
         }
 
-        // Verificar si las cartas del set están en la base de datos
         def cartasDelSet = AllCards.findAllBySetName(set.name)
         if (!cartasDelSet || cartasDelSet.isEmpty()) {
             try {
-                cargarCartasDeSet(setId) // Llamada a la API para cargar las cartas
+                cargarCartasDeSet(setId)
                 cartasDelSet = AllCards.findAllBySetName(set.name)
             } catch (Exception e) {
                 log.error("Error al cargar cartas desde la API para el set ${setId}: ${e.message}", e)
@@ -192,12 +191,6 @@ class MainController {
                 redirect(action: "abrirSobres")
                 return
             }
-        }
-
-        if (!cartasDelSet || cartasDelSet.isEmpty()) {
-            flash.message = "No hay cartas disponibles para este set."
-            redirect(action: "abrirSobres")
-            return
         }
 
         def cartasRaras = cartasDelSet.findAll { it.rarity && it.rarity != "Common" }
@@ -209,22 +202,30 @@ class MainController {
             return
         }
 
-        // Seleccionar una carta rara
         Collections.shuffle(cartasRaras)
         def cartaRara = cartasRaras.first()
 
-        // Seleccionar tres cartas comunes
         Collections.shuffle(cartasComunes)
         def cartasComunesSeleccionadas = cartasComunes.take(3)
 
-        // Combinar las cartas seleccionadas
         def cartasSeleccionadas = cartasComunesSeleccionadas + cartaRara
 
-        // Actualizar el saldo del usuario
         user.saldo -= sobreCosto
         user.save(flush: true, failOnError: true)
 
-        // Guardar las cartas en la colección del usuario
+        def cartasConEstado = cartasSeleccionadas.collect { cardData ->
+            def existingCard = user.cards?.find { it.cardId == cardData.cardId }
+            def isNew = !existingCard || existingCard.quantity < 1
+            [
+                cardId: cardData.cardId,
+                name: cardData.name,
+                imageUrl: cardData.imageUrl,
+                setName: cardData.setName,
+                rarity: cardData.rarity,
+                isNew: isNew
+            ]
+        }
+
         cartasSeleccionadas.each { cardData ->
             def existingCard = user.cards?.find { it.cardId == cardData.cardId }
             if (existingCard) {
@@ -243,7 +244,7 @@ class MainController {
             }
         }
 
-        render(view: "sobreAbierto", model: [cards: cartasSeleccionadas, currentUser: user, set: set])
+        render(view: "sobreAbierto", model: [cards: cartasConEstado, currentUser: user, set: set])
     }
 
     def obtenerCartasPorColeccion(String setId) {

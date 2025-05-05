@@ -16,6 +16,7 @@
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     width: 200px;
+    position: relative; /* Ensure the "NUEVO" label is positioned correctly */
 }
 .card img {
     height: 220px;
@@ -70,6 +71,11 @@
 <div class="cards-container">
     <g:each in="${cards}" var="card">
         <div class="card">
+            <g:if test="${card.isNew}">
+                <div style="position: absolute; background-color: #ff0000; color: white; padding: 5px; border-radius: 5px; top: 10px; left: 10px; font-size: 0.8rem;">
+                    NUEVO
+                </div>
+            </g:if>
             <img src="${card.imageUrl ?: '/images/default.png'}" alt="${card.name}" class="clickable-image"/>
             <p>${card.name}</p>
             <small>${set?.name}</small>

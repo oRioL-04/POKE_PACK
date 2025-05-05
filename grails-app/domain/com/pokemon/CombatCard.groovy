@@ -6,6 +6,8 @@ class CombatCard {
     String imageUrl
     Integer hp
     List attacks
+    String supertype
+    List weaknesses
 
     static constraints = {
         cardId blank: false, unique: true
@@ -13,9 +15,12 @@ class CombatCard {
         imageUrl nullable: true
         hp min: 1
         attacks nullable: true
+        supertype blank: false
+        weaknesses nullable: true
     }
 
     static mapping = {
-        attacks type: 'text' // Almacenar ataques como JSON
+        attacks type: 'text' // Store attacks as JSON
+        weaknesses type: 'text' // Store weaknesses as JSON
     }
 }

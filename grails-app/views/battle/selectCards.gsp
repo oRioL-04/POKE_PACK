@@ -1,31 +1,88 @@
 <meta name="layout" content="main"/>
-<h2>Selecciona 4 Pokémon</h2>
+<h2 class="page-title">Selecciona 4 Pokémon</h2>
+
+<g:if test="${flash.message}">
+    <div class="flash-message">
+        ${flash.message}
+    </div>
+</g:if>
+
 <style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f9f9f9;
+        margin: 0;
+        padding: 0;
+    }
+    .page-title {
+        text-align: center;
+        color: #333;
+        margin-top: 20px;
+        font-size: 2rem;
+    }
+    .flash-message {
+        color: red;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-align: center;
+    }
     .card-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 20px;
         justify-items: center;
+        padding: 20px;
     }
     .card-item {
+        background: #fff;
         border: 2px solid transparent;
         border-radius: 10px;
-        padding: 10px;
+        padding: 15px;
         text-align: center;
         cursor: pointer;
-        transition: border-color 0.3s, transform 0.2s;
+        transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
     .card-item img {
-        width: 100px;
+        width: 120px;
         height: auto;
+        border-radius: 10px;
+        margin-bottom: 10px;
+    }
+    .card-item:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
     }
     .card-item.selected {
         border-color: #ffcb05;
         transform: scale(1.05);
     }
+    .submit-button {
+        display: block;
+        margin: 20px auto;
+        background-color: #ffcb05;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        color: #333;
+        text-align: center;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+    .submit-button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+    .submit-button:hover:enabled {
+        transform: scale(1.05);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    }
 </style>
 
-<g:form controller="Battle" action="startBattle" method="POST" id="cardForm">
+<g:form controller="battle" action="startBattle" method="POST" id="cardForm">
     <input type="hidden" name="setId" value="${setId}"/>
     <div class="card-grid">
         <g:each in="${userCards}" var="card" status="index">
@@ -36,7 +93,7 @@
         </g:each>
     </div>
     <input type="hidden" name="selectedCards" id="selectedCards" />
-    <button type="submit" disabled id="submitButton">Iniciar Combate</button>
+    <button type="submit" disabled id="submitButton" class="submit-button">Iniciar Combate</button>
 </g:form>
 
 <script>
