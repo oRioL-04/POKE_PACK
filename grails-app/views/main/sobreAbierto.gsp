@@ -84,7 +84,7 @@
 </div>
 
 <div style="display: flex; justify-content: center; margin-top: 20px;">
-    <g:link controller="Main" action="menu" class="back-button">Volver al menú</g:link>
+    <g:link controller="Main" action="abrirSobres" class="back-button">Volver al menú</g:link>
 </div>
 
 <script>
