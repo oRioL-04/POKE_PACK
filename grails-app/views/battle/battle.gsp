@@ -1,76 +1,221 @@
-<%--
-  Created by IntelliJ IDEA.
-  User: oriol
-  Date: 5/4/25
-  Time: 7:09 PM
---%>
-<meta name="layout" content="main"/>
-<h2>Combate Pokémon</h2>
-<div style="display: flex; justify-content: space-around; align-items: center; margin-top: 20px;">
-    <!-- User's Pokémon -->
-    <div style="text-align: center;">
-        <h3>Tu Pokémon</h3>
-        <g:if test="${battle.userTeam && battle.userTeam[battle.currentUserPokemon]}">
-            <img src="${battle.userTeam[battle.currentUserPokemon].imageUrl}"
-                 alt="${battle.userTeam[battle.currentUserPokemon].name}"
-                 style="width: 150px; height: auto;"/>
-            <h4>${battle.userTeam[battle.currentUserPokemon].name}</h4>
-            <p>HP: ${battle.userTeam[battle.currentUserPokemon].hp}</p>
-            <div>
-                <g:if test="${battle.userTeam[battle.currentUserPokemon].attacks?.size() > 0}">
-                    <g:each in="${battle.userTeam[battle.currentUserPokemon].attacks}" var="attack">
-                        <g:form controller="Battle" action="attack">
-                            <input type="hidden" name="attackName" value="${attack.name}" />
-                            <button type="submit">${attack.name} (${attack.damage} daño)</button>
-                        </g:form>
-                    </g:each>
-                </g:if>
-                <g:else>
-                    <p>No hay ataques disponibles para este Pokémon.</p>
-                </g:else>
-            </div>
-        </g:if>
-    </div>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="layout" content="main"/>
+    <title>Batalla Pokémon</title>
+    <style>
+    .battle-wrapper {
+        display: flex;
+        justify-content: space-between;
+        gap: 40px;
+        padding: 40px;
+        flex-wrap: wrap;
+    }
 
-    <!-- VS Divider -->
-    <div style="font-size: 2rem; font-weight: bold;">VS</div>
+    .side {
+        flex: 1 1 45%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
 
-    <!-- IA's Pokémon -->
-    <div style="text-align: center;">
-        <h3>Pokémon de la IA</h3>
-        <g:if test="${battle.iaTeam && battle.iaTeam[battle.currentIaPokemon]}">
-            <img src="${battle.iaTeam[battle.currentIaPokemon].imageUrl}"
-                 alt="${battle.iaTeam[battle.currentIaPokemon].name}"
-                 style="width: 150px; height: auto;"/>
-            <h4>${battle.iaTeam[battle.currentIaPokemon].name}</h4>
-            <p>HP: ${battle.iaTeam[battle.currentIaPokemon].hp}</p>
-        </g:if>
-    </div>
-</div>
+    .pokemon-active {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        text-align: center;
+        margin-bottom: 20px;
+    }
 
-<!-- Combat History -->
-<div style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9;">
-    <h3>Historial de Combate</h3>
-    <ul>
-        <g:each in="${battle.history}" var="event">
-            <li>${event}</li>
-        </g:each>
-    </ul>
-</div>
+    .pokemon-active img {
+        width: 180px;
+        height: auto;
+        margin-bottom: 15px;
+    }
 
-<!-- End Message -->
-<g:if test="${battle.result}">
-    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                background-color: rgba(0, 0, 0, 0.8); color: white; padding: 20px;
-                border-radius: 10px; text-align: center; z-index: 1000;">
-        <h2>${battle.result}</h2>
-        <g:if test="${battle.result == '¡Has ganado el combate!'}">
-            <p>¡Has recibido 100 monedas!</p>
-        </g:if>
-    </div>
-    <script>
-        setTimeout(() => {
-            window.location.href = "${createLink(controller: 'Main', action: 'menu')}";
-        }, 5000); // Redirect after 5 seconds
-    </script>
+    .hp-text {
+        font-size: 18px;
+        margin-bottom: 10px;
+        font-weight: bold;
+    }
+
+    .attack-button {
+        background-color: #ffcb05;
+        border: none;
+        padding: 8px 18px;
+        margin: 5px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    .attack-button:hover {
+        background-color: #e0b200;
+    }
+
+    .bench {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        gap: 12px;
+        justify-items: center;
+        margin-top: 15px;
+    }
+
+    .bench-card-form {
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+    }
+
+    .bench-card-form img {
+        width: 70px;
+        height: 100px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+
+    .bench-card-form img:hover {
+        transform: scale(1.05);
+    }
+
+    .history-box {
+        border: 1px solid #ccc;
+        background-color: #f9f9f9;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 20px;
+        max-width: 100%;
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    .history-box ul {
+        list-style-type: none;
+        padding-left: 0;
+    }
+
+    .history-box li {
+        padding: 5px 0;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    .result-box {
+        text-align: center;
+        font-size: 1.5em;
+        font-weight: bold;
+        color: green;
+        margin: 20px;
+    }
+
+    .message {
+        text-align: center;
+        color: red;
+        margin-top: 10px;
+    }
+
+    .battle-chat {
+        font-size: 14px;
+        background-color: #e9e9e9;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 30px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .battle-chat p {
+        margin: 5px 0;
+    }
+    </style>
+</head>
+<body>
+
+<g:if test="${flash.message}">
+    <div class="message">${flash.message}</div>
 </g:if>
+
+<g:if test="${battle.result}">
+    <div class="result-box">${battle.result}</div>
+    <div style="text-align: center;">
+        <g:link controller="main" action="menu" class="attack-button">Volver al menú</g:link>
+    </div>
+</g:if>
+
+<div class="battle-wrapper">
+
+    <!-- LADO USUARIO -->
+    <div class="side">
+        <g:set var="player" value="${battle.userTeam[battle.currentUserPokemon]}"/>
+        <div class="pokemon-active">
+            <h2>Tu Pokémon</h2>
+            <img src="${player.imageUrl}" alt="${player.name}" />
+            <div class="hp-text">HP: ${player.hp}</div>
+            <h3>${player.name}</h3>
+
+            <g:if test="${!battle.result && !battle.canSwitchPokemon}">
+                <form action="${createLink(action: 'attack')}" method="post">
+                    <g:each in="${player.attacks}" var="atk">
+                        <button type="submit" name="attackName" value="${atk.name}" class="attack-button">
+                            ${atk.name} (${atk.damage} dmg)
+                        </button>
+                    </g:each>
+                </form>
+            </g:if>
+        </div>
+
+        <!-- BANQUILLO USUARIO -->
+        <div class="bench">
+            <g:each in="${battle.userTeam}" var="poke" status="i">
+                <g:if test="${i != battle.currentUserPokemon && poke.hp > 0}">
+                    <form action="${createLink(action: 'changePokemon')}" method="post" class="bench-card-form">
+                        <input type="hidden" name="index" value="${i}"/>
+                        <input type="hidden" name="team" value="user"/>
+                        <button type="submit" class="bench-card-form">
+                            <img src="${poke.imageUrl}" alt="${poke.name}" />
+                        </button>
+                    </form>
+                </g:if>
+            </g:each>
+        </div>
+    </div>
+
+    <!-- LADO IA -->
+    <div class="side">
+        <g:set var="ia" value="${battle.iaTeam[battle.currentIaPokemon]}"/>
+        <div class="pokemon-active">
+            <h2>Pokémon de la IA</h2>
+            <img src="${ia.imageUrl}" alt="${ia.name}" />
+            <div class="hp-text">HP: ${ia.hp}</div>
+            <h3>${ia.name}</h3>
+        </div>
+
+        <!-- BANQUILLO IA -->
+        <div class="bench">
+            <g:each in="${battle.iaTeam}" var="poke" status="i">
+                <g:if test="${i != battle.currentIaPokemon && poke.hp > 0}">
+                    <img src="${poke.imageUrl}" alt="${poke.name}" />
+                </g:if>
+            </g:each>
+        </div>
+    </div>
+</div>
+
+<!-- Historial de la Batalla -->
+<div class="battle-chat">
+    <h3>Chat de la Batalla</h3>
+    <div class="history-box">
+        <ul>
+            <g:each in="${battle.history}" var="event">
+                <li>${event}</li>
+            </g:each>
+        </ul>
+    </div>
+</div>
+
+</body>
+</html>

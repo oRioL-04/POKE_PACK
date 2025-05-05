@@ -5,6 +5,7 @@ class CombatCard {
     String name
     String imageUrl
     Integer hp
+    Integer maxHp
     List attacks
     String supertype
     List weaknesses
@@ -15,6 +16,7 @@ class CombatCard {
         name blank: false
         imageUrl nullable: true
         hp min: 1
+        maxHp min: 1
         attacks nullable: true
         supertype blank: false
         weaknesses nullable: true
