@@ -8,6 +8,7 @@ class CombatCard {
     List attacks
     String supertype
     List weaknesses
+    String type // New field to store the Pokémon's type
 
     static constraints = {
         cardId blank: false, unique: true
@@ -17,6 +18,7 @@ class CombatCard {
         attacks nullable: true
         supertype blank: false
         weaknesses nullable: true
+        type blank: false // Ensure type is not null
     }
 
     static mapping = {

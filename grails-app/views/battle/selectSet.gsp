@@ -9,6 +9,17 @@
 <h2 class="page-title">Selecciona una colección</h2>
 
 <style>
+    .search-bar {
+        margin: 20px auto;
+        text-align: center;
+    }
+    .search-bar input {
+        width: 50%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 1rem;
+    }
     .grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -59,7 +70,11 @@
     }
 </style>
 
-<div class="grid">
+<div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Buscar colección...">
+</div>
+
+<div class="grid" id="setGrid">
     <g:each in="${sets}" var="set">
         <div class="set-card">
             <g:link controller="Battle" action="selectCards" params="[setId: set.setId]">
@@ -69,3 +84,23 @@
         </div>
     </g:each>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("searchInput");
+        const setGrid = document.getElementById("setGrid");
+        const setCards = setGrid.querySelectorAll(".set-card");
+
+        searchInput.addEventListener("input", function () {
+            const query = searchInput.value.toLowerCase();
+            setCards.forEach(card => {
+                const setName = card.querySelector("p").textContent.toLowerCase();
+                if (setName.includes(query)) {
+                    card.style.display = "block"; // Show the element
+                } else {
+                    card.style.display = "none"; // Hide the element
+                }
+            });
+        });
+    });
+</script>

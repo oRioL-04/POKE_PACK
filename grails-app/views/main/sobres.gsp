@@ -39,10 +39,24 @@
     cursor: pointer;
     transition: color 0.3s ease;
 }
-
-
+.search-bar {
+    margin: 20px auto;
+    text-align: center;
+}
+.search-bar input {
+    width: 50%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+}
 </style>
-<div class="grid">
+
+<div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Buscar colección...">
+</div>
+
+<div class="grid" id="setGrid">
     <g:each in="${sets}" var="set">
         <div class="set-card">
             <img src="${set.logoUrl}" alt="${set.name}" onerror="this.src='/images/default.png'"/>
@@ -52,7 +66,6 @@
                     onclick="return confirm('¿Estás seguro de que deseas abrir un sobre de la colección ${set.name}?')">
                 Abrir sobre
             </g:link>
-            <!-- grails-app/views/main/sobres.gsp -->
             <button
                 data-set-id="${set.id}"
                 onclick="toggleFavorite(this)"
@@ -64,21 +77,34 @@
 </div>
 
 <script>
-    // Script en sobres.gsp
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("searchInput");
+        const setGrid = document.getElementById("setGrid");
+        const setCards = setGrid.querySelectorAll(".set-card");
+
+        searchInput.addEventListener("input", function () {
+            const query = searchInput.value.toLowerCase();
+            setCards.forEach(card => {
+                const setName = card.querySelector("p").textContent.toLowerCase();
+                card.style.display = setName.includes(query) ? "block" : "none";
+            });
+        });
+    });
+
     function toggleFavorite(button) {
-        const setId = button.getAttribute('data-set-id'); // Obtener el setId del atributo
+        const setId = button.getAttribute('data-set-id');
         fetch(`/main/toggleFavorite`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ setId }) // Enviar setId en el cuerpo
+            body: JSON.stringify({ setId })
         })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    button.classList.toggle('active', data.isFavorite); // Cambiar color
-                    location.reload(); // Recargar la página para actualizar el orden
+                    button.classList.toggle('active', data.isFavorite);
+                    location.reload();
                 } else {
                     alert(data.message || 'Error al actualizar el favorito.');
                 }
