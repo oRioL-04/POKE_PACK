@@ -51,7 +51,6 @@
 /* Estilo del botón */
 .back-button {
     display: inline-block;
-    margin: 20px auto;
     background-color: #ffcb05;
     padding: 10px 20px;
     border-radius: 8px;
@@ -61,10 +60,22 @@
     text-align: center;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    margin: 0; /* Elimina márgenes para que los botones estén pegados */
 }
+
 .back-button:hover {
     transform: scale(1.05);
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Estilo para la lista de botones */
+ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    gap: 10px; /* Separación pequeña entre los botones */
+    margin-top: 20px;
 }
 </style>
 
@@ -89,25 +100,27 @@
     <img id="modalImage" src="" alt="Imagen ampliada"/>
 </div>
 
-<div style="display: flex; justify-content: center; margin-top: 20px;">
-    <g:link controller="Main" action="abrirSobres" class="back-button">Volver al menú</g:link>
-</div>
+<ul>
+    <li><g:link controller="Main" action="abrirSobres" class="back-button">Volver al menú</g:link></li>
+    <!-- Botón de "Abrir otro sobre" -->
+    <li><a href="#" class="back-button" onclick="window.location.reload(); return false;">Abrir otro sobre</a></li>
+</ul>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const modal = document.getElementById("imageModal");
-    const modalImage = document.getElementById("modalImage");
-    const images = document.querySelectorAll(".clickable-image");
+    document.addEventListener("DOMContentLoaded", function () {
+        const modal = document.getElementById("imageModal");
+        const modalImage = document.getElementById("modalImage");
+        const images = document.querySelectorAll(".clickable-image");
 
-    images.forEach(image => {
-        image.addEventListener("click", function () {
-            modalImage.src = this.src;
-            modal.style.display = "flex";
+        images.forEach(image => {
+            image.addEventListener("click", function () {
+                modalImage.src = this.src;
+                modal.style.display = "flex";
+            });
+        });
+
+        modal.addEventListener("click", function () {
+            modal.style.display = "none";
         });
     });
-
-    modal.addEventListener("click", function () {
-        modal.style.display = "none";
-    });
-});
 </script>
