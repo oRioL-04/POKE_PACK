@@ -212,6 +212,8 @@ class BattleController {
 
         def currentPokemon = battle.userTeam[battle.currentUserPokemon]
         def enemyPokemon = battle.iaTeam[battle.currentIaPokemon]
+        def user = User.get(session.userId)
+
 
         if (!currentPokemon || currentPokemon.hp <= 0) {
             battle.canSwitchPokemon = true
@@ -239,7 +241,9 @@ class BattleController {
             if (nextIa != -1) {
                 battle.currentIaPokemon = nextIa
             } else {
-                battle.result = "¡Has ganado el combate!"
+                battle.result = "¡Has ganado la batalla!"
+                user.saldo += 100
+                user.save(flush: true)
             }
         }
 
