@@ -12,17 +12,17 @@ class TradeController {
         }
 
         def cardId = params.cardId
-        def targetUsername = params.targetUsername
+        def targetUserId = params.targetUserId
         def targetCardId = params.targetCardId
 
-        if (!cardId || !targetUsername || !targetCardId) {
+        if (!cardId || !targetUserId || !targetCardId) {
             render([success: false, message: "Datos incompletos para el intercambio"] as JSON)
             return
         }
 
-        def userCard = user.cards.find { it.cardId == cardId }
-        def targetUser = User.findByUsername(targetUsername)
-        def targetCard = targetUser?.cards?.find { it.cardId == targetCardId }
+        def userCard = user.cards.find { it.cardId?.toString() == cardId }
+        def targetUser = User.get(targetUserId as Long)
+        def targetCard = targetUser?.cards?.find { it.cardId?.toString() == targetCardId }
 
         if (!userCard || !targetCard) {
             render([success: false, message: "Cartas o usuario no encontrados"] as JSON)
@@ -35,16 +35,17 @@ class TradeController {
         }
 
         def tradeRequest = new TradeRequest(
-            requester: user,
-            targetUser: targetUser,
-            requesterCard: userCard,
-            targetCard: targetCard,
-            status: "PENDING"
+                requester: user,
+                targetUser: targetUser,
+                requesterCard: userCard,
+                targetCard: targetCard,
+                status: "PENDING"
         )
         tradeRequest.save(flush: true, failOnError: true)
 
         render([success: true, message: "Solicitud de intercambio enviada"] as JSON)
     }
+
 
     def mostrarFormularioIntercambio() {
         def user = User.get(session.userId)
@@ -69,10 +70,22 @@ class TradeController {
             return
         }
 
+        // Filtrar las cartas con propiedades válidas
         def cartas = Card.findAllByOwnerAndSetNameAndQuantityGreaterThan(user, Set.findBySetId(setId)?.name, 1)
-        def cartasValidas = cartas.findAll { it?.name && it?.quantity } // Filtrar cartas con datos válidos
-        render(cartasValidas as JSON)
+        cartas = cartas.findAll { it?.name && it?.quantity }
+
+        // Si no hay cartas válidas, puedes retornar un mensaje adecuado o una lista vacía
+        if (!cartas) {
+            render([success: false, message: "No hay cartas válidas para este set."] as JSON)
+            return
+        }
+
+        render(cartas as JSON)
     }
+
+
+
+
 
     def obtenerCartasDeUsuario(Long userId, String setId) {
         def targetUser = User.get(userId)
@@ -90,8 +103,6 @@ class TradeController {
         def usuarios = User.list().findAll { it.id != session.userId }
         render(usuarios as JSON)
     }
-
-
 
     def responderIntercambio(Long tradeRequestId, String response) {
         def user = User.get(session.userId)
