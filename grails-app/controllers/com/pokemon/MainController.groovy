@@ -323,10 +323,10 @@ class MainController {
                 page++
             } while ((page - 1) * pageSize < totalCount)
 
-            flash.message = "Todas las cartas se han cargado correctamente en la base de datos."
+            flash.message = "Se han cargado todas las cartas faltantes en la base de datos."
         } catch (Exception e) {
-            log.error("Error al cargar todas las cartas: ${e.message}", e)
-            flash.message = "Error al cargar las cartas desde la API."
+            log.error("Error al cargar las cartas faltantes: ${e.message}", e)
+            flash.message = "Error al cargar las cartas faltantes desde la API."
         }
         redirect(action: "menu")
     }

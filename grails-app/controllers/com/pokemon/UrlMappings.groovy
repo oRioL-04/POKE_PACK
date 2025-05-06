@@ -11,6 +11,9 @@ class UrlMappings {
         "/"(controller: "main", action: "menu")
         "500"(view:'/error')
         "404"(view:'/notFound')
-
+        "/trade/request"(controller: "trade", action: "solicitarIntercambio")
+        "/trade/respond"(controller: "trade", action: "responderIntercambio")
+        "/trade/list"(controller: "trade", action: "listarSolicitudes")
+        "/trade/mostrarFormularioIntercambio"(controller: "trade", action: "mostrarFormularioIntercambio")
     }
 }

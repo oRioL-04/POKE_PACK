@@ -44,4 +44,5 @@
     <li><g:link controller="Main" action="pokedex">Ver Pokédex</g:link></li>
     <li><g:link controller="Main" action="abrirSobres">Abrir sobres</g:link></li>
     <li><g:link controller="Battle" action="selectTeam">Combate</g:link></li>
+    <li><g:link controller="trade" action="mostrarFormularioIntercambio">Intercambio</g:link></li>
 </ul>
