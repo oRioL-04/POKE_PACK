@@ -44,13 +44,31 @@
     }
 </style>
 <div class="form-container">
-    <g:form controller="trade" action="cargarCartasIntercambio" method="get">
-        <label>Selecciona el usuario con quien intercambiar:</label>
-        <g:select name="targetUserId" from="${usuarios}" optionKey="id" optionValue="username" required="true"/>
+        <g:form controller="trade" action="cargarCartasIntercambio" method="get">
+            <label>Selecciona el usuario con quien intercambiar:</label>
+            <g:select name="targetUserId" from="${usuarios}" optionKey="id" optionValue="username" required="true"/>
 
-        <label>Selecciona el set:</label>
-        <g:select name="setId" from="${sets}" optionKey="setId" optionValue="name" required="true"/>
+            <label>Selecciona el set:</label>
+            <div style="position: relative;">
+                <input type="text" id="searchSetInput" placeholder="Buscar set..." style="width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem;" oninput="filterSets()" />
+                <select id="setDropdown" name="setId" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem;">
+                    <g:each in="${sets}" var="set">
+                        <option value="${set.setId}">${set.name}</option>
+                    </g:each>
+                </select>
+            </div>
+            <button type="submit" class="g-submitButton">Siguiente</button>
+        </g:form>
+    </div>
+    <script>
+        function filterSets() {
+            const input = document.getElementById('searchSetInput').value.toLowerCase();
+            const dropdown = document.getElementById('setDropdown');
+            const options = dropdown.options;
 
-        <button type="submit" class="g-submitButton">Siguiente</button>
-    </g:form>
-</div>
+            for (let i = 0; i < options.length; i++) {
+                const optionText = options[i].text.toLowerCase();
+                options[i].style.display = optionText.includes(input) ? '' : 'none';
+            }
+        }
+    </script>

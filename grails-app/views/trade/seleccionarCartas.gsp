@@ -33,6 +33,12 @@
         gap: 12px;
         margin-bottom: 12px;
         padding: 6px 0;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        transition: border 0.2s;
+    }
+    .card-option.selected {
+        border: 5px solid red;
     }
     .card-option img {
         width: 60px;
@@ -45,6 +51,9 @@
     .card-option label {
         flex: 1;
         font-size: 1rem;
+    }
+    .card-option:has(input:checked) {
+        border: 5px solid red;
     }
     .submit-btn {
         display: block;
@@ -73,24 +82,49 @@
     <div class="cards-select-container">
         <div class="card-list">
             <h3>Tu carta</h3>
-            <g:each in="${cartasUsuario}" var="carta" status="i">
-                <div class="card-option">
-                    <input type="radio" name="cardId" id="miCarta${i}" value="${carta.cardId}" required="${i == 0}"/>
-                    <img src="${carta.imageUrl ?: '/images/default.png'}" alt="${carta.name}"/>
-                    <label for="miCarta${i}">${carta.name} (x${carta.quantity})</label>
-                </div>
-            </g:each>
+            <input type="text" id="searchUserCards" placeholder="Buscar tu carta..." oninput="filterCards('userCards', this.value)" />
+            <div id="userCards">
+                <g:each in="${cartasUsuario}" var="carta" status="i">
+                    <label class="card-option" for="miCarta${i}">
+                        <input type="radio" name="cardId" id="miCarta${i}" value="${carta.cardId}" required="${i == 0}" style="display: none;"/>
+                        <img src="${carta.imageUrl ?: '/images/default.png'}" alt="${carta.name}"/>
+                        <span>
+                            ${carta.name} (x${carta.quantity})<br/>
+                            <small style="color: #888;">Rareza: ${carta.rarity}</small>
+                        </span>
+                    </label>
+                </g:each>
+            </div>
         </div>
         <div class="card-list">
             <h3>Carta del usuario</h3>
-            <g:each in="${cartasTarget}" var="carta" status="j">
-                <div class="card-option">
-                    <input type="radio" name="targetCardId" id="targetCarta${j}" value="${carta.cardId}" required="${j == 0}"/>
-                    <img src="${carta.imageUrl ?: '/images/default.png'}" alt="${carta.name}"/>
-                    <label for="targetCarta${j}">${carta.name} (x${carta.quantity})</label>
-                </div>
-            </g:each>
+            <input type="text" id="searchTargetCards" placeholder="Buscar carta del usuario..." oninput="filterCards('targetCards', this.value)" />
+            <div id="targetCards">
+                <g:each in="${cartasTarget}" var="carta" status="j">
+                    <label class="card-option" for="targetCarta${j}">
+                        <input type="radio" name="targetCardId" id="targetCarta${j}" value="${carta.cardId}" required="${j == 0}" style="display: none;"/>
+                        <img src="${carta.imageUrl ?: '/images/default.png'}" alt="${carta.name}"/>
+                        <span>
+                            ${carta.name} (x${carta.quantity})<br/>
+                            <small style="color: #888;">Rareza: ${carta.rarity}</small>
+                        </span>
+                    </label>
+                </g:each>
+            </div>
         </div>
     </div>
     <button type="submit" class="submit-btn">Enviar solicitud</button>
 </g:form>
+
+<script>
+    function filterCards(containerId, searchText) {
+        const container = document.getElementById(containerId);
+        const cards = container.querySelectorAll('.card-option');
+        const lowerSearchText = searchText.toLowerCase();
+
+        cards.forEach(card => {
+            const cardText = card.textContent.toLowerCase();
+            card.style.display = cardText.includes(lowerSearchText) ? '' : 'none';
+        });
+    }
+</script>

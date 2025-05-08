@@ -49,7 +49,7 @@
     }
 </style>
 
-<div class="historial-container">
+<div class="historial-container" style="position: relative;">
     <h3>Historial de Intercambios</h3>
     <g:if test="${intercambios}">
         <ul>
@@ -67,9 +67,27 @@
     <g:else>
         <p>No hay intercambios registrados.</p>
     </g:else>
+
+    <!-- Botón de papelera -->
+    <g:form controller="trade" action="eliminarIntercambiosAceptados" method="post" style="position: absolute; top: 10px; right: 10px;">
+        <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 24px;">
+            🗑️
+        </button>
+    </g:form>
 </div>
 
 <div class="action-buttons">
     <g:link controller="trade" action="mostrarFormularioIntercambio">Iniciar Nuevo Intercambio</g:link>
     <g:link controller="trade" action="listarSolicitudes">Ver Solicitudes de Intercambio</g:link>
 </div>
+
+<g:if test="${flash.message}">
+    <p class="error-message">${flash.message}</p>
+    <g:if test="${delayRedirect}">
+        <script>
+            setTimeout(() => {
+                window.location.href = "${createLink(controller: 'trade', action: 'intercambios')}";
+            }, 3000); // 3 segundos de retraso
+        </script>
+    </g:if>
+</g:if>

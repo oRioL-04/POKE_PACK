@@ -39,8 +39,27 @@ class TradeController {
             return
         }
 
-        def cartasUsuario = Card.findAllByOwnerAndSetNameAndQuantityGreaterThan(usuarioActual, set.name, 1)
-        def cartasTarget = Card.findAllByOwnerAndSetNameAndQuantityGreaterThan(targetUser, set.name, 1)
+        def cartasUsuario = Card.findAllByOwnerAndSetNameAndQuantityGreaterThan(usuarioActual, set.name, 1).collect { carta ->
+            def allCard = AllCards.findByCardId(carta.cardId)
+            [
+                cardId: carta.cardId,
+                name: carta.name,
+                imageUrl: carta.imageUrl,
+                quantity: carta.quantity,
+                rarity: allCard?.rarity ?: "Desconocida"
+            ]
+        }
+
+        def cartasTarget = Card.findAllByOwnerAndSetNameAndQuantityGreaterThan(targetUser, set.name, 1).collect { carta ->
+            def allCard = AllCards.findByCardId(carta.cardId)
+            [
+                cardId: carta.cardId,
+                name: carta.name,
+                imageUrl: carta.imageUrl,
+                quantity: carta.quantity,
+                rarity: allCard?.rarity ?: "Desconocida"
+            ]
+        }
 
         render(view: 'seleccionarCartas', model: [
                 targetUser   : targetUser,
@@ -63,9 +82,19 @@ class TradeController {
         def targetUser = User.get(params.targetUserId as Long)
         def targetCard = Card.findByCardIdAndOwner(params.targetCardId, targetUser)
 
-        if (!userCard || !targetCard || userCard.rarity != targetCard.rarity) {
-            flash.message = "Error: Cartas no válidas o con rarezas distintas"
+        if (!userCard || !targetCard) {
+            flash.message = "Error: Cartas no válidas"
             redirect(action: 'mostrarFormularioIntercambio')
+            return
+        }
+
+        // Fetch rarities from AllCards
+        def userCardRarity = AllCards.findByCardId(userCard.cardId)?.rarity
+        def targetCardRarity = AllCards.findByCardId(targetCard.cardId)?.rarity
+
+        if (!userCardRarity || !targetCardRarity || userCardRarity != targetCardRarity) {
+            flash.message = "Error: Las cartas tienen rarezas diferentes"
+            render(view: 'errorRarity')
             return
         }
 
@@ -100,10 +129,25 @@ class TradeController {
         if (response == "ACCEPT") {
             def requester = tradeRequest.requester
             def targetUser = tradeRequest.targetUser
+
+            // Check if both users have at least 100 coins
+            if (requester.saldo < 100 || targetUser.saldo < 100) {
+                flash.message = "Error: Ambos usuarios deben tener al menos 100 monedas para completar el intercambio."
+                render(view: 'intercambios', model: [delayRedirect: true])
+                return
+            }
+
+            // Deduct 100 coins from both users
+            requester.saldo -= 100
+            targetUser.saldo -= 100
+            requester.save(flush: true, failOnError: true)
+            targetUser.save(flush: true, failOnError: true)
+
+            // Proceed with the card exchange
             def requesterCard = tradeRequest.requesterCard
             def targetCard = tradeRequest.targetCard
 
-            // Transferir carta del requester al targetUser
+            // Transfer cards between users
             def cardToTarget = Card.findByOwnerAndCardId(targetUser, requesterCard.cardId)
             if (cardToTarget) {
                 cardToTarget.quantity += 1
@@ -123,7 +167,6 @@ class TradeController {
             requesterCard.quantity -= 1
             requesterCard.save(flush: true, failOnError: true)
 
-            // Transferir carta del targetUser al requester
             def cardToRequester = Card.findByOwnerAndCardId(requester, targetCard.cardId)
             if (cardToRequester) {
                 cardToRequester.quantity += 1
@@ -143,11 +186,11 @@ class TradeController {
             targetCard.quantity -= 1
             targetCard.save(flush: true, failOnError: true)
 
-            // Actualizar el estado del intercambio a "ACCEPTED"
+            // Update trade request status
             tradeRequest.status = "ACCEPTED"
             tradeRequest.save(flush: true, failOnError: true)
 
-            flash.message = "Intercambio completado exitosamente"
+            flash.message = "Intercambio completado exitosamente. Se han descontado 100 monedas a cada usuario."
             redirect(controller: 'main', action: 'menu')
 
         } else if (response == "REJECT") {
@@ -241,5 +284,16 @@ class TradeController {
             currentUser: user // Incluye el usuario actual en el modelo
         ]
     }
+    def eliminarIntercambiosAceptados() {
+        def user = User.get(session.userId)
+        if (!user) {
+            flash.message = "Debe iniciar sesión"
+            redirect(controller: 'auth', action: 'index')
+            return
+        }
 
+        TradeRequest.where { status == "ACCEPTED" }.deleteAll()
+        flash.message = "Intercambios aceptados eliminados exitosamente."
+        redirect(controller: 'trade', action: 'intercambios')
+    }
 }

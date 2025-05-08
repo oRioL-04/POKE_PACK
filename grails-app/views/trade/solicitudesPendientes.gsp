@@ -86,8 +86,10 @@
                 </p>
                 <g:if test="${s.requesterCard && s.targetCard}">
                     <div class="solicitud-actions">
-                        <g:link action="responderIntercambio" params="[tradeRequestId: s.id, response: 'ACCEPT']">Aceptar</g:link>
-                        <g:link action="responderIntercambio" params="[tradeRequestId: s.id, response: 'REJECT']">Rechazar</g:link>
+                        <g:link action="responderIntercambio" params="[tradeRequestId: s.id, response: 'ACCEPT']"
+                                onclick="return confirm('Aceptar este intercambio tendrá un coste de 100 Pokémonedas. ¿Deseas continuar?');">
+                            Aceptar
+                        </g:link>                        <g:link action="responderIntercambio" params="[tradeRequestId: s.id, response: 'REJECT']">Rechazar</g:link>
                     </div>
                 </g:if>
                 <g:else>
