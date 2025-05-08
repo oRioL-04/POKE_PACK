@@ -133,8 +133,7 @@
                 <g:link controller="main" action="abrirSobres">Abrir Sobre</g:link>
                 <g:link controller="main" action="pokedex">Mi Pokédex</g:link>
                 <g:link controller="battle" action="selectTeam">Combate</g:link>
-                <g:link controller="trade" action="mostrarFormularioIntercambio">Intercambio</g:link>
-                <g:link controller="trade" action="solicitudesPendientes">Ver Solicitudes de Intercambio</g:link>
+                <g:link controller="trade" action="intercambios">Intercambio</g:link>
             </g:if>
         </div>
         <g:if test="${currentUser}">

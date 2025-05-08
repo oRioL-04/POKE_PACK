@@ -16,10 +16,10 @@ class TradeController {
         def cartasUsuario = Card.findAllByOwnerAndQuantityGreaterThan(usuarioActual, 0)
 
         render(view: 'formularioIntercambio', model: [
-                usuarios     : usuarios,
-                sets         : sets,
-                cartasUsuario: cartasUsuario,
-                currentUser  : usuarioActual
+            usuarios     : usuarios,
+            sets         : sets,
+            cartasUsuario: cartasUsuario,
+            currentUser  : usuarioActual // Asegúrate de incluir el usuario actual
         ])
     }
 
@@ -103,53 +103,49 @@ class TradeController {
             def requesterCard = tradeRequest.requesterCard
             def targetCard = tradeRequest.targetCard
 
-            // Función auxiliar para buscar carta por owner y cardId
-            def getCard = { owner, cardId ->
-                Card.findByOwnerAndCardId(owner, cardId)
-            }
-
-            // 1. Transferir carta del requester al targetUser
-            def cardToTarget = getCard(targetUser, requesterCard.cardId)
+            // Transferir carta del requester al targetUser
+            def cardToTarget = Card.findByOwnerAndCardId(targetUser, requesterCard.cardId)
             if (cardToTarget) {
                 cardToTarget.quantity += 1
                 cardToTarget.save(flush: true, failOnError: true)
             } else {
                 new Card(
-                        cardId: requesterCard.cardId,
-                        name: requesterCard.name,
-                        rarity: requesterCard.rarity,
-                        setName: requesterCard.setName,
-                        imageUrl: requesterCard.imageUrl,
-                        quantity: 1,
-                        owner: targetUser,
-                        username: targetUser.username
+                    cardId: requesterCard.cardId,
+                    name: requesterCard.name,
+                    rarity: requesterCard.rarity,
+                    setName: requesterCard.setName,
+                    imageUrl: requesterCard.imageUrl,
+                    quantity: 1,
+                    owner: targetUser,
+                    username: targetUser.username
                 ).save(flush: true, failOnError: true)
             }
             requesterCard.quantity -= 1
             requesterCard.save(flush: true, failOnError: true)
 
-            // 2. Transferir carta del targetUser al requester
-            def cardToRequester = getCard(requester, targetCard.cardId)
+            // Transferir carta del targetUser al requester
+            def cardToRequester = Card.findByOwnerAndCardId(requester, targetCard.cardId)
             if (cardToRequester) {
                 cardToRequester.quantity += 1
                 cardToRequester.save(flush: true, failOnError: true)
             } else {
                 new Card(
-                        cardId: targetCard.cardId,
-                        name: targetCard.name,
-                        rarity: targetCard.rarity,
-                        setName: targetCard.setName,
-                        imageUrl: targetCard.imageUrl,
-                        quantity: 1,
-                        owner: requester,
-                        username: requester.username
+                    cardId: targetCard.cardId,
+                    name: targetCard.name,
+                    rarity: targetCard.rarity,
+                    setName: targetCard.setName,
+                    imageUrl: targetCard.imageUrl,
+                    quantity: 1,
+                    owner: requester,
+                    username: requester.username
                 ).save(flush: true, failOnError: true)
             }
             targetCard.quantity -= 1
             targetCard.save(flush: true, failOnError: true)
 
-            // 3. Eliminar la solicitud
-            tradeRequest.delete(flush: true)
+            // Actualizar el estado del intercambio a "ACCEPTED"
+            tradeRequest.status = "ACCEPTED"
+            tradeRequest.save(flush: true, failOnError: true)
 
             flash.message = "Intercambio completado exitosamente"
             redirect(controller: 'main', action: 'menu')
@@ -164,6 +160,29 @@ class TradeController {
         }
     }
 
+    def intercambios() {
+        def user = User.get(session.userId)
+        if (!user) {
+            flash.message = "Debe iniciar sesión"
+            redirect(controller: 'auth', action: 'index')
+            return
+        }
+
+        def intercambios = TradeRequest.findAllByRequesterOrTargetUser(user, user).collect { trade ->
+            [
+                requester: trade.requester,
+                targetUser: trade.targetUser,
+                requesterCard: Card.get(trade.requesterCard?.id), // Carga la carta del solicitante
+                targetCard: Card.get(trade.targetCard?.id),       // Carga la carta del destinatario
+                status: trade.status
+            ]
+        }
+
+        render(view: 'intercambios', model: [
+            intercambios: intercambios,
+            currentUser: user // Pasa el usuario actual al modelo
+        ])
+    }
 
 
 
@@ -202,7 +221,8 @@ class TradeController {
     def listarSolicitudes() {
         def user = User.get(session.userId)
         if (!user) {
-            render([success: false, message: "Usuario no autenticado"] as JSON)
+            flash.message = "Debe iniciar sesión"
+            redirect(controller: 'auth', action: 'index')
             return
         }
 
@@ -216,7 +236,10 @@ class TradeController {
             }
         }
 
-        render view: 'solicitudesPendientes', model: [solicitudes: solicitudes]
+        render view: 'solicitudesPendientes', model: [
+            solicitudes: solicitudes,
+            currentUser: user // Incluye el usuario actual en el modelo
+        ]
     }
 
 }

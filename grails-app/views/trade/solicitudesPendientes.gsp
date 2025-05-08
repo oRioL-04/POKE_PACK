@@ -9,6 +9,20 @@
 <meta name="layout" content="main"/>
 <h2 class="page-title">Solicitudes de Intercambio</h2>
 <style>
+    .btn-volver {
+        display: inline-block;
+        background: #ef5350;
+        color: #fff;
+        padding: 10px 20px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: background 0.3s;
+    }
+    .btn-volver:hover {
+        background: #ffcb05;
+        color: #333;
+    }
     .solicitudes-list {
         max-width: 600px;
         margin: 30px auto;
@@ -49,6 +63,16 @@
         color: #888;
         margin-top: 30px;
     }
+    .page-title {
+        text-align: center; /* Centra el título horizontalmente */
+    }
+    .no-solicitudes {
+        display: flex;
+        justify-content: center; /* Centra horizontalmente */
+        align-items: center; /* Centra verticalmente */
+        height: 100%; /* Asegura que ocupe todo el espacio disponible */
+        min-height: 150px; /* Altura mínima para el cuadro */
+    }
 </style>
 <div class="solicitudes-list">
     <g:if test="${solicitudes && solicitudes.size() > 0}">
@@ -77,4 +101,8 @@
             No tienes solicitudes pendientes.
         </div>
     </g:else>
+</div>
+
+<div style="text-align: center; margin-top: 20px;">
+    <g:link controller="main" action="menu" class="btn-volver">Volver a Inicio</g:link>
 </div>
