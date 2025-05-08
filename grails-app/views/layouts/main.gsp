@@ -35,14 +35,23 @@
         align-items: center;
     }
 
+    .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+
+    }
+
     .navbar a {
         color: white;
         font-weight: 600;
-        margin: 0 15px;
         text-decoration: none;
         padding: 8px 12px;
         border-radius: 6px;
         transition: all 0.3s ease;
+        background: none;
+        margin: 0;
     }
 
     .navbar a:hover {
@@ -66,37 +75,52 @@
         overflow-y: auto;
     }
 
+
     .user-info {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-left: auto; /* Esto los empuja a la derecha */
     }
 
     .username {
-        margin-right: 15px;
         font-weight: 600;
     }
 
-    @media (max-width: 768px) {
-        .navbar {
-            flex-direction: column;
-            padding: 0.5rem;
-        }
-
+    @media (max-width: 900px) {
         .navbar-container {
             flex-direction: column;
+            align-items: stretch;
         }
-
-        .navbar a {
-            margin: 5px;
-            font-size: 0.9rem;
+        .nav-links, .user-info {
+            width: 100%;
+            justify-content: flex-start;
+            margin-right: 0;
+            margin-bottom: 10px;
         }
-
         .user-info {
-            margin-top: 10px;
+            justify-content: flex-end;
+            margin-top: 0;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .main-content {
+            padding: 1rem 0.2rem;
+        }
+        .navbar {
+            padding: 0.5rem;
+        }
+        .nav-links {
+            gap: 5px;
+        }
+        .navbar a {
+            font-size: 0.9rem;
+            padding: 6px 8px;
         }
     }
     </style>
-
     <g:layoutHead/>
 </head>
 
@@ -111,11 +135,8 @@
                 <g:link controller="battle" action="selectTeam">Combate</g:link>
                 <g:link controller="trade" action="mostrarFormularioIntercambio">Intercambio</g:link>
                 <g:link controller="trade" action="solicitudesPendientes">Ver Solicitudes de Intercambio</g:link>
-
-
             </g:if>
         </div>
-
         <g:if test="${currentUser}">
             <div class="user-info">
                 <span class="username">${currentUser.username}</span>
