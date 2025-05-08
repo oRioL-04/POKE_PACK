@@ -15,5 +15,7 @@ class UrlMappings {
         "/trade/respond"(controller: "trade", action: "responderIntercambio")
         "/trade/list"(controller: "trade", action: "listarSolicitudes")
         "/trade/mostrarFormularioIntercambio"(controller: "trade", action: "mostrarFormularioIntercambio")
+        "/trade/solicitudesPendientes"(controller: "trade", action: "listarSolicitudes")
+
     }
 }

@@ -4,63 +4,89 @@ import grails.converters.JSON
 
 class TradeController {
 
+    def mostrarFormularioIntercambio() {
+        def usuarioActual = User.get(session.userId)
+        if (!usuarioActual) {
+            redirect(controller: 'auth', action: 'index')
+            return
+        }
+
+        def usuarios = User.findAllByIdNotEqual(usuarioActual.id)
+        def sets = Set.list()
+        def cartasUsuario = Card.findAllByOwnerAndQuantityGreaterThan(usuarioActual, 0)
+
+        render(view: 'formularioIntercambio', model: [
+                usuarios: usuarios,
+                sets: sets,
+                cartasUsuario: cartasUsuario
+        ])
+    }
+
+    def cargarCartasIntercambio() {
+        def usuarioActual = User.get(session.userId)
+        if (!usuarioActual) {
+            flash.message = "Debe iniciar sesión"
+            redirect(controller: 'auth', action: 'index')
+            return
+        }
+
+        def targetUser = User.get(params.targetUserId as Long)
+        def set = Set.findBySetId(params.setId)
+        if (!targetUser || !set) {
+            flash.message = "Datos inválidos"
+            redirect(action: 'mostrarFormularioIntercambio')
+            return
+        }
+
+        def cartasUsuario = Card.findAllByOwnerAndSetNameAndQuantityGreaterThan(usuarioActual, set.name, 1)
+        def cartasTarget = Card.findAllByOwnerAndSetNameAndQuantityGreaterThan(targetUser, set.name, 1)
+
+        render(view: 'seleccionarCartas', model: [
+                targetUser: targetUser,
+                set: set,
+                cartasUsuario: cartasUsuario,
+                cartasTarget: cartasTarget
+        ])
+    }
+
     def solicitarIntercambio() {
         def user = User.get(session.userId)
         if (!user) {
-            render([success: false, message: "Usuario no autenticado"] as JSON)
+            flash.message = "Usuario no autenticado"
+            redirect(controller: 'auth', action: 'index')
             return
         }
 
-        def cardId = params.cardId
-        def targetUserId = params.targetUserId
-        def targetCardId = params.targetCardId
+        def userCard = Card.findByCardIdAndOwner(params.cardId, user)
+        def targetUser = User.get(params.targetUserId as Long)
+        def targetCard = Card.findByCardIdAndOwner(params.targetCardId, targetUser)
 
-        if (!cardId || !targetUserId || !targetCardId) {
-            render([success: false, message: "Datos incompletos para el intercambio"] as JSON)
+        if (!userCard || !targetCard || userCard.rarity != targetCard.rarity) {
+            flash.message = "Error: Cartas no válidas o con rarezas distintas"
+            redirect(action: 'mostrarFormularioIntercambio')
             return
         }
 
-        def userCard = user.cards.find { it.cardId?.toString() == cardId }
-        def targetUser = User.get(targetUserId as Long)
-        def targetCard = targetUser?.cards?.find { it.cardId?.toString() == targetCardId }
-
-        if (!userCard || !targetCard) {
-            render([success: false, message: "Cartas o usuario no encontrados"] as JSON)
-            return
-        }
-
-        if (userCard.rarity != targetCard.rarity) {
-            render([success: false, message: "Las cartas deben tener la misma rareza para ser intercambiadas"] as JSON)
-            return
-        }
-
-        def tradeRequest = new TradeRequest(
+        def solicitud = new TradeRequest(
                 requester: user,
                 targetUser: targetUser,
                 requesterCard: userCard,
                 targetCard: targetCard,
                 status: "PENDING"
         )
-        tradeRequest.save(flush: true, failOnError: true)
 
-        render([success: true, message: "Solicitud de intercambio enviada"] as JSON)
+        solicitud.save(flush: true, failOnError: true)
+        flash.message = "Solicitud de intercambio enviada"
+        redirect(controller: 'main', action: 'menu') // o a una vista de confirmación
     }
 
 
-    def mostrarFormularioIntercambio() {
-        def user = User.get(session.userId)
-        if (!user) {
-            flash.message = "Debes iniciar sesión para acceder a esta página."
-            redirect(controller: "auth", action: "index")
-            return
-        }
 
-        render(view: "solicitarIntercambio", model: [currentUser: user])
-    }
+
+
 
     def obtenerSets() {
-        def sets = Set.list()
-        render(sets as JSON)
+        render(Set.list() as JSON)
     }
 
     def obtenerCartasPorSet(String setId) {
@@ -70,22 +96,9 @@ class TradeController {
             return
         }
 
-        // Filtrar las cartas con propiedades válidas
         def cartas = Card.findAllByOwnerAndSetNameAndQuantityGreaterThan(user, Set.findBySetId(setId)?.name, 1)
-        cartas = cartas.findAll { it?.name && it?.quantity }
-
-        // Si no hay cartas válidas, puedes retornar un mensaje adecuado o una lista vacía
-        if (!cartas) {
-            render([success: false, message: "No hay cartas válidas para este set."] as JSON)
-            return
-        }
-
         render(cartas as JSON)
     }
-
-
-
-
 
     def obtenerCartasDeUsuario(Long userId, String setId) {
         def targetUser = User.get(userId)
@@ -95,8 +108,7 @@ class TradeController {
         }
 
         def cartas = Card.findAllByOwnerAndSetNameAndQuantityGreaterThan(targetUser, Set.findBySetId(setId)?.name, 1)
-        def cartasValidas = cartas.findAll { it?.name && it?.quantity } // Filtrar cartas con datos válidos
-        render(cartasValidas as JSON)
+        render(cartas as JSON)
     }
 
     def obtenerUsuarios() {
@@ -107,41 +119,54 @@ class TradeController {
     def responderIntercambio(Long tradeRequestId, String response) {
         def user = User.get(session.userId)
         if (!user) {
-            render([success: false, message: "Usuario no autenticado"] as JSON)
+            flash.message = "Usuario no autenticado"
+            redirect(controller: 'auth', action: 'index')
             return
         }
 
         def tradeRequest = TradeRequest.get(tradeRequestId)
         if (!tradeRequest || tradeRequest.targetUser.id != user.id) {
-            render([success: false, message: "Solicitud de intercambio no válida"] as JSON)
+            flash.message = "Solicitud de intercambio no válida"
+            redirect(controller: 'main', action: 'menu')
             return
         }
 
         if (response == "ACCEPT") {
-            // Realizar el intercambio
             def requesterCard = tradeRequest.requesterCard
             def targetCard = tradeRequest.targetCard
 
-            // Transferir las cartas
             requesterCard.owner = tradeRequest.targetUser
             targetCard.owner = tradeRequest.requester
 
-            requesterCard.save(flush: true, failOnError: true)
-            targetCard.save(flush: true, failOnError: true)
+            if (!requesterCard.save(flush: true)) {
+                flash.message = "Error al guardar la carta del solicitante"
+                redirect(controller: 'main', action: 'menu')
+                return
+            }
+
+            if (!targetCard.save(flush: true)) {
+                flash.message = "Error al guardar la carta del objetivo"
+                redirect(controller: 'main', action: 'menu')
+                return
+            }
 
             tradeRequest.status = "ACCEPTED"
-            tradeRequest.save(flush: true, failOnError: true)
+            tradeRequest.save(flush: true)
 
-            render([success: true, message: "Intercambio realizado con éxito"] as JSON)
+            flash.message = "Intercambio realizado con éxito"
+            redirect(controller: 'main', action: 'menu')
         } else if (response == "REJECT") {
             tradeRequest.status = "REJECTED"
-            tradeRequest.save(flush: true, failOnError: true)
+            tradeRequest.save(flush: true)
 
-            render([success: true, message: "Intercambio rechazado"] as JSON)
+            flash.message = "Intercambio rechazado"
+            redirect(controller: 'main', action: 'menu')
         } else {
-            render([success: false, message: "Respuesta no válida"] as JSON)
+            flash.message = "Respuesta no válida"
+            redirect(controller: 'main', action: 'menu')
         }
     }
+
 
     def listarSolicitudes() {
         def user = User.get(session.userId)
@@ -151,6 +176,9 @@ class TradeController {
         }
 
         def solicitudes = TradeRequest.findAllByTargetUserAndStatus(user, "PENDING")
-        render([success: true, solicitudes: solicitudes] as JSON)
+        render view: 'solicitudesPendientes', model: [solicitudes: solicitudes]
     }
+
+
+
 }
