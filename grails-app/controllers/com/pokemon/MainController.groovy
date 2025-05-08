@@ -197,34 +197,55 @@ class MainController {
         def cartasComunes = cartasDelSet.findAll { !it.rarity || it.rarity == "Common" }
 
         if (cartasRaras.isEmpty() || cartasComunes.size() < 3) {
+            log.error("No hay suficientes cartas raras o comunes disponibles para el set ${setId}.")
             flash.message = "No hay suficientes cartas disponibles para este set."
             redirect(action: "abrirSobres")
             return
         }
 
-        Collections.shuffle(cartasRaras)
-        def cartaRara = cartasRaras.first()
+        def rarezaPesos = [
+            "Rare"                     : 40,
+            "Uncommon"                 : 30,
+            "Double Rare"              : 15,
+            "Ultra Rare"               : 10,
+            "Hyper Rare"               : 3,
+            "Special Illustration Rare": 1,
+            "Illustration Rare"        : 1
+        ]
+
+        def cartasPorRareza = rarezaPesos.collectEntries { rareza, peso ->
+            [(rareza): cartasRaras.findAll { it.rarity == rareza }]
+        }
+
+        def rarezaPesosActualizados = cartasPorRareza.findAll { it.value }.collectEntries { rareza, cartas ->
+            [(rareza): rarezaPesos[rareza]]
+        }
+
+        if (rarezaPesosActualizados.isEmpty()) {
+            log.error("No hay cartas raras disponibles para el set ${setId}.")
+            flash.message = "No hay cartas raras disponibles para este set."
+            redirect(action: "abrirSobres")
+            return
+        }
+
+        def rarezaPonderada = rarezaPesosActualizados.collectMany { rareza, peso ->
+            (1..peso).collect { rareza }
+        }
+        Collections.shuffle(rarezaPonderada)
+        def rarezaSeleccionada = rarezaPonderada.first()
+
+        def cartasDeRarezaSeleccionada = cartasPorRareza[rarezaSeleccionada]
+        Collections.shuffle(cartasDeRarezaSeleccionada)
+        def ultimaCarta = cartasDeRarezaSeleccionada.first()
 
         Collections.shuffle(cartasComunes)
         def cartasComunesSeleccionadas = cartasComunes.take(3)
 
-        def cartasSeleccionadas = cartasComunesSeleccionadas + cartaRara
+        def cartasSeleccionadas = cartasComunesSeleccionadas + ultimaCarta
 
+        // Guardar cartas seleccionadas en la base de datos
         user.saldo -= sobreCosto
         user.save(flush: true, failOnError: true)
-
-        def cartasConEstado = cartasSeleccionadas.collect { cardData ->
-            def existingCard = user.cards?.find { it.cardId == cardData.cardId }
-            def isNew = !existingCard || existingCard.quantity < 1
-            [
-                cardId: cardData.cardId,
-                name: cardData.name,
-                imageUrl: cardData.imageUrl,
-                setName: cardData.setName,
-                rarity: cardData.rarity,
-                isNew: isNew
-            ]
-        }
 
         cartasSeleccionadas.each { cardData ->
             def existingCard = user.cards?.find { it.cardId == cardData.cardId }
@@ -244,7 +265,63 @@ class MainController {
             }
         }
 
-        render(view: "sobreAbierto", model: [cards: cartasConEstado, currentUser: user, set: set])
+        // Verificar si las cartas son nuevas
+        // Verificar si las cartas son nuevas ANTES de guardar
+
+
+        // Verificar si las cartas son nuevas ANTES de guardar
+        def cartasConEstado = cartasSeleccionadas.collect { cardData ->
+            def yaExiste = Card.findByCardIdAndOwnerAndUsername(cardData.cardId, user, user.username)
+            [
+                    cardData: cardData,
+                    isNew: !yaExiste,
+                    existente: yaExiste // Guardamos el objeto si ya existe
+            ]
+        }
+
+// Actualizar saldo del usuario
+        user.saldo -= sobreCosto
+        user.save(flush: true, failOnError: true)
+
+// Guardar cartas en la base de datos
+        cartasConEstado.each { entry ->
+            def cardData = entry.cardData
+            def existingCard = entry.existente
+            if (existingCard) {
+                existingCard.quantity += 1
+                existingCard.save(flush: true, failOnError: true)
+            } else {
+                def newCard = new Card(
+                        cardId: cardData.cardId,
+                        name: cardData.name,
+                        imageUrl: cardData.imageUrl,
+                        setName: cardData.setName,
+                        username: user.username,
+                        owner: user,
+                        quantity: 1
+                )
+                newCard.save(flush: true, failOnError: true)
+            }
+        }
+
+// Enviar al frontend la lista con el estado de si es nueva
+        def resultado = cartasConEstado.collect { entry ->
+            def cardData = entry.cardData
+            [
+                    cardId: cardData.cardId,
+                    name: cardData.name,
+                    imageUrl: cardData.imageUrl,
+                    setName: cardData.setName,
+                    rarity: cardData.rarity,
+                    isNew: entry.isNew
+            ]
+        }
+
+        render(view: "sobreAbierto", model: [cards: resultado, currentUser: user, set: set])
+
+
+        render(view: "sobreAbierto", model: [cards: resultado, currentUser: user, set: set])
+
     }
 
     def obtenerCartasPorColeccion(String setId) {
