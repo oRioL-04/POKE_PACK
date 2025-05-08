@@ -138,23 +138,66 @@ class TradeController {
             requesterCard.owner = tradeRequest.targetUser
             targetCard.owner = tradeRequest.requester
 
-            if (!requesterCard.save(flush: true)) {
-                flash.message = "Error al guardar la carta del solicitante"
+
+
+            // Validación de cantidad suficiente
+            if (requesterCard.quantity < 1 || targetCard.quantity < 1) {
+                flash.message = "Uno de los usuarios no tiene suficiente cantidad de la carta"
                 redirect(controller: 'main', action: 'menu')
                 return
             }
 
-            if (!targetCard.save(flush: true)) {
-                flash.message = "Error al guardar la carta del objetivo"
+            // Restar 1 a la cantidad de cada carta
+            requesterCard.quantity -= 1
+            targetCard.quantity -= 1
+
+            // Añadir carta al receptor (o actualizar cantidad si ya la tiene)
+            def targetUserCard = Card.findByCardIdAndOwner(requesterCard.cardId, tradeRequest.targetUser)
+            if (targetUserCard) {
+                targetUserCard.quantity += 1
+            } else {
+                targetUserCard = new Card(
+                        cardId: requesterCard.cardId,
+                        name: requesterCard.name,
+                        rarity: requesterCard.rarity,
+                        setName: requesterCard.setName,
+                        quantity: 1,
+                        owner: tradeRequest.targetUser
+                )
+            }
+
+            def requesterNewCard = Card.findByCardIdAndOwner(targetCard.cardId, tradeRequest.requester)
+            if (requesterNewCard) {
+                requesterNewCard.quantity += 1
+            } else {
+                requesterNewCard = new Card(
+                        cardId: targetCard.cardId,
+                        name: targetCard.name,
+                        rarity: targetCard.rarity,
+                        setName: targetCard.setName,
+                        quantity: 1,
+                        owner: tradeRequest.requester
+                )
+            }
+
+            // Guardar los cambios
+            if (!requesterCard.save(flush: true) ||
+                    !targetCard.save(flush: true) ||
+                    !targetUserCard.save(flush: true) ||
+                    !requesterNewCard.save(flush: true)) {
+
+                flash.message = "Error al procesar el intercambio"
                 redirect(controller: 'main', action: 'menu')
                 return
             }
+
 
             tradeRequest.status = "ACCEPTED"
             tradeRequest.save(flush: true)
 
             flash.message = "Intercambio realizado con éxito"
             redirect(controller: 'main', action: 'menu')
+
         } else if (response == "REJECT") {
             tradeRequest.status = "REJECTED"
             tradeRequest.save(flush: true)
