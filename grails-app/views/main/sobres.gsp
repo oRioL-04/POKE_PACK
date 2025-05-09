@@ -3,12 +3,9 @@
 <style>
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Increase card size */
+    gap: 30px; /* Add more spacing between cards */
     padding: 20px;
-}
-.favorite-button.active {
-    color: gold;
 }
 .set-card {
     background-color: white;
@@ -16,28 +13,42 @@
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     text-align: center;
+    display: flex;
+    flex-direction: column; /* Ensure proper stacking of elements */
+    align-items: center;
+    gap: 10px; /* Add spacing between elements inside the card */
+    position: relative; /* For positioning the favorite star */
 }
 .set-card img {
     width: 100%;
-    height: 150px;
+    height: 200px; /* Increase image height */
     object-fit: contain;
 }
 .set-card a {
     margin-top: 10px;
     background-color: #ffcb05;
-    padding: 8px;
+    padding: 10px 15px; /* Adjust padding for better button size */
     border-radius: 8px;
     text-decoration: none;
     font-weight: bold;
     color: #333;
+    display: inline-block;
+    width: 100%; /* Make buttons occupy the same width */
+    text-align: center;
 }
-.favorite-button {
+.set-card .favorite-button {
     font-size: 24px;
     color: gray;
     background: none;
     border: none;
     cursor: pointer;
     transition: color 0.3s ease;
+    position: absolute; /* Position the star in the top-right corner */
+    top: 10px;
+    right: 10px;
+}
+.set-card .favorite-button.active {
+    color: gold;
 }
 .search-bar {
     margin: 20px auto;
@@ -59,6 +70,12 @@
 <div class="grid" id="setGrid">
     <g:each in="${sets}" var="set">
         <div class="set-card">
+            <button
+                data-set-id="${set.id}"
+                onclick="toggleFavorite(this)"
+                class="favorite-button ${set.isFavorite ? 'active' : ''}">
+                ★
+            </button>
             <img src="${set.logoUrl}" alt="${set.name}" onerror="this.src='/images/default.png'"/>
             <p>${set.name}</p>
             <p>Costo: 50 Pokémonedas</p>
@@ -66,12 +83,10 @@
                     onclick="return confirm('¿Estás seguro de que deseas abrir un sobre de la colección ${set.name}?')">
                 Abrir sobre
             </g:link>
-            <button
-                data-set-id="${set.id}"
-                onclick="toggleFavorite(this)"
-                class="favorite-button ${set.isFavorite ? 'active' : ''}">
-                ★
-            </button>
+            <g:link action="abrirDiezSobres" params="[setId: set.id]"
+                    onclick="return confirm('¿Estás seguro de que deseas abrir 10 sobres de la colección ${set.name}?')">
+                Abrir 10 sobres
+            </g:link>
         </div>
     </g:each>
 </div>

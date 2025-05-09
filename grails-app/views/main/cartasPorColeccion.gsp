@@ -1,6 +1,7 @@
 <meta name="layout" content="main"/>
 <h2>Álbum de la colección ${set.name}</h2>
 <style>
+/* Estilos existentes */
 .back-button {
     display: inline-block;
     margin: 20px auto;
@@ -86,12 +87,29 @@
     max-height: 90%;
     border-radius: 10px;
 }
+
+/* Estilo del buscador */
+.search-bar {
+    margin: 20px auto;
+    text-align: center;
+}
+.search-bar input {
+    width: 50%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+}
 </style>
 
-<div class="album-grid">
+<div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Buscar Pokémon por nombre..."/>
+</div>
+
+<div class="album-grid" id="albumGrid">
     <g:each in="${1..set.totalCards}" var="cardNumber">
         <g:if test="${cards.find { it.cardNumber?.toInteger() == cardNumber }?.quantity > 0}">
-            <div class="card-slot obtained">
+            <div class="card-slot obtained" data-name="${cards.find { it.cardNumber?.toInteger() == cardNumber }?.name?.toLowerCase()}">
                 <img src="${cards.find { it.cardNumber?.toInteger() == cardNumber }?.imageUrl ?: '/images/default.png'}"
                      alt="Carta ${cardNumber}"
                      class="clickable-image"/>
@@ -100,7 +118,7 @@
             </div>
         </g:if>
         <g:else>
-            <div class="card-slot">
+            <div class="card-slot" data-name="">
                 <div class="missing">#${cardNumber}</div>
             </div>
         </g:else>
@@ -121,6 +139,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const modal = document.getElementById("imageModal");
     const modalImage = document.getElementById("modalImage");
     const images = document.querySelectorAll(".clickable-image");
+    const searchInput = document.getElementById("searchInput");
+    const cardSlots = document.querySelectorAll(".card-slot");
 
     images.forEach(image => {
         image.addEventListener("click", function () {
@@ -131,6 +151,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
     modal.addEventListener("click", function () {
         modal.style.display = "none";
+    });
+
+    searchInput.addEventListener("input", function () {
+        const query = this.value.toLowerCase();
+        cardSlots.forEach(slot => {
+            const name = slot.getAttribute("data-name");
+            if (name.includes(query)) {
+                slot.style.display = "flex";
+            } else {
+                slot.style.display = "none";
+            }
+        });
     });
 });
 </script>

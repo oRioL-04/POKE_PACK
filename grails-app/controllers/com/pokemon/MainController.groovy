@@ -110,6 +110,8 @@ class MainController {
     }
 
     def abrirSobres() {
+        session.tenPacksOpened = false // Reset the flag when returning to the sobres screen
+        session.packOpened = false // Reset the single pack flag as well
         def user = User.get(session.userId)
         if (!user) {
             redirect(controller: "Auth", action: "index")
@@ -167,16 +169,25 @@ class MainController {
             return
         }
 
+        // Redirect to "sobres" if a pack has already been opened
+        if (session.packOpened) {
+            flash.message = "Ya has abierto un sobre. Recarga no permitida."
+            redirect(action: "abrirSobres")
+            return
+        }
+
+        session.packOpened = true // Mark the pack as opened
+
         if (user.saldo < sobreCosto) {
             flash.message = "No tienes suficiente saldo para abrir un sobre."
-            redirect(action: "abrirSobres")
+            redirect(action: "abrirSobres", params: [setId: setId])
             return
         }
 
         def set = Set.findBySetId(setId)
         if (!set) {
             flash.message = "El set seleccionado no existe."
-            redirect(action: "abrirSobres")
+            redirect(action: "abrirSobres", params: [setId: setId])
             return
         }
 
@@ -188,7 +199,7 @@ class MainController {
             } catch (Exception e) {
                 log.error("Error al cargar cartas desde la API para el set ${setId}: ${e.message}", e)
                 flash.message = "No se pudieron cargar las cartas del set desde la API."
-                redirect(action: "abrirSobres")
+                redirect(action: "abrirSobres", params: [setId: setId])
                 return
             }
         }
@@ -199,85 +210,18 @@ class MainController {
         if (cartasRaras.isEmpty() || cartasComunes.size() < 3) {
             log.error("No hay suficientes cartas raras o comunes disponibles para el set ${setId}.")
             flash.message = "No hay suficientes cartas disponibles para este set."
-            redirect(action: "abrirSobres")
+            redirect(action: "abrirSobres", params: [setId: setId])
             return
         }
 
-        // Sistema de pesos para rarezas
-        def rarezaPesos = [
-            "Uncommon"                   : 40,
-            "Rare"                       : 30,
-            "Rare Holo"                  : 25,
-            "Rare Holo EX"               : 20,
-            "Rare Holo GX"               : 20,
-            "Rare Holo LV.X"             : 20,
-            "Rare Holo Star"             : 15,
-            "Rare Holo V"                : 20,
-            "Rare Holo VMAX"             : 15,
-            "Rare Holo VSTAR"            : 15,
-            "Rare Prime"                 : 15,
-            "Rare Prism Star"            : 10,
-            "Rare Rainbow"               : 5,
-            "Rare Secret"                : 5,
-            "Rare Shining"               : 10,
-            "Rare Shiny"                 : 10,
-            "Rare Shiny GX"              : 8,
-            "Rare Ultra"                 : 5,
-            "Double Rare"                : 15,
-            "Ultra Rare"                 : 10,
-            "Hyper Rare"                 : 5,
-            "Special Illustration Rare"  : 3,
-            "Illustration Rare"          : 3,
-            "Trainer Gallery Rare Holo"  : 10,
-            "Amazing Rare"               : 8,
-            "Radiant Rare"               : 8,
-            "Promo"                      : 20,
-            "Classic Collection"         : 10,
-            "LEGEND"                     : 5,
-            "ACE SPEC Rare"              : 5,
-            "Rare ACE"                   : 5,
-            "Rare BREAK"                 : 10
-        ]
-
-        // Asignar probabilidad promedio a rarezas no incluidas en los pesos
-        def rarezasNoIncluidas = cartasRaras.findAll { !rarezaPesos.containsKey(it.rarity) }
-        def probabilidadPromedio = rarezaPesos.values().sum() / rarezaPesos.size()
-        rarezasNoIncluidas.each { carta ->
-            rarezaPesos[carta.rarity] = probabilidadPromedio
-        }
-
-        def cartasPorRareza = rarezaPesos.collectEntries { rareza, peso ->
-            [(rareza): cartasRaras.findAll { it.rarity == rareza }]
-        }
-
-        def rarezaPesosActualizados = cartasPorRareza.findAll { it.value && !it.value.isEmpty() }
-        if (rarezaPesosActualizados.isEmpty()) {
-            log.error("No hay cartas raras disponibles para el set ${setId}.")
-            flash.message = "No hay cartas raras disponibles para este set."
-            redirect(action: "abrirSobres")
-            return
-        }
-
-        def totalPeso = rarezaPesosActualizados.collect { rareza, cartas ->
-            rarezaPesos[rareza]
-        }.sum()
-
-        def randomPeso = new Random().nextInt(totalPeso) + 1
-        def rarezaSeleccionada = rarezaPesosActualizados.find { rareza, cartas ->
-            randomPeso -= rarezaPesos[rareza]
-            randomPeso <= 0
-        }?.key
-
-        def cartasDeRarezaSeleccionada = cartasPorRareza[rarezaSeleccionada]
-        Collections.shuffle(cartasDeRarezaSeleccionada)
-        def cartaRaraSeleccionada = cartasDeRarezaSeleccionada.first()
-
+        Collections.shuffle(cartasRaras)
         Collections.shuffle(cartasComunes)
+
+        def cartaRaraSeleccionada = cartasRaras.first()
         def cartasComunesSeleccionadas = cartasComunes.take(3)
 
         def cartasSeleccionadas = cartasComunesSeleccionadas + cartaRaraSeleccionada
 
-        // Verificar si las cartas son nuevas ANTES de guardar
         def cartasConEstado = cartasSeleccionadas.collect { cardData ->
             def yaExiste = Card.findByCardIdAndOwnerAndUsername(cardData.cardId, user, user.username)
             if (yaExiste) {
@@ -301,11 +245,9 @@ class MainController {
             ]
         }
 
-        // Actualizar saldo del usuario
         user.saldo -= sobreCosto
         user.save(flush: true, failOnError: true)
 
-        // Enviar al frontend la lista con el estado de si es nueva
         def resultado = cartasConEstado.collect { entry ->
             def cardData = entry.cardData
             [
@@ -318,7 +260,112 @@ class MainController {
             ]
         }
 
-        render(view: "sobreAbierto", model: [cards: resultado, currentUser: user, set: set])
+        render(view: "sobreAbierto", model: [cards: resultado, currentUser: user, set: set, setId: setId])
+    }
+
+    def abrirDiezSobres(String setId) {
+        if (session.tenPacksOpened) {
+            flash.message = "Ya has abierto 10 sobres. Recarga no permitida."
+            redirect(action: "abrirSobres")
+            return
+        }
+
+        session.tenPacksOpened = true // Mark the 10 packs as opened
+
+        def user = User.get(session.userId)
+        def sobreCosto = 50.0 * 10 // Cost for 10 packs
+
+        if (!user) {
+            redirect(controller: "Auth", action: "index")
+            return
+        }
+
+        if (user.saldo < sobreCosto) {
+            flash.message = "No tienes suficiente saldo para abrir 10 sobres."
+            redirect(action: "abrirSobres", params: [setId: setId])
+            return
+        }
+
+        def set = Set.findBySetId(setId)
+        if (!set) {
+            flash.message = "El set seleccionado no existe."
+            redirect(action: "abrirSobres", params: [setId: setId])
+            return
+        }
+
+        def cartasDelSet = AllCards.findAllBySetName(set.name)
+        if (!cartasDelSet || cartasDelSet.isEmpty()) {
+            try {
+                cargarCartasDeSet(setId)
+                cartasDelSet = AllCards.findAllBySetName(set.name)
+            } catch (Exception e) {
+                log.error("Error al cargar cartas desde la API para el set ${setId}: ${e.message}", e)
+                flash.message = "No se pudieron cargar las cartas del set desde la API."
+                redirect(action: "abrirSobres", params: [setId: setId])
+                return
+            }
+        }
+
+        def resultadoFinal = []
+        10.times {
+            def cartasRaras = cartasDelSet.findAll { it.rarity && it.rarity != "Common" }
+            def cartasComunes = cartasDelSet.findAll { !it.rarity || it.rarity == "Common" }
+
+            if (cartasRaras.isEmpty() || cartasComunes.size() < 3) {
+                log.error("No hay suficientes cartas raras o comunes disponibles para el set ${setId}.")
+                flash.message = "No hay suficientes cartas disponibles para este set."
+                redirect(action: "abrirSobres", params: [setId: setId])
+                return
+            }
+
+            Collections.shuffle(cartasRaras)
+            Collections.shuffle(cartasComunes)
+
+            def cartaRaraSeleccionada = cartasRaras.first()
+            def cartasComunesSeleccionadas = cartasComunes.take(3)
+
+            def cartasSeleccionadas = cartasComunesSeleccionadas + cartaRaraSeleccionada
+
+            def cartasConEstado = cartasSeleccionadas.collect { cardData ->
+                def yaExiste = Card.findByCardIdAndOwnerAndUsername(cardData.cardId, user, user.username)
+                if (yaExiste) {
+                    yaExiste.quantity += 1
+                    yaExiste.save(flush: true, failOnError: true)
+                } else {
+                    def newCard = new Card(
+                        cardId: cardData.cardId,
+                        name: cardData.name,
+                        imageUrl: cardData.imageUrl,
+                        setName: cardData.setName,
+                        username: user.username,
+                        owner: user,
+                        quantity: 1
+                    )
+                    newCard.save(flush: true, failOnError: true)
+                }
+                [
+                    cardData: cardData,
+                    isNew: !yaExiste
+                ]
+            }
+
+            resultadoFinal += cartasConEstado.collect { entry ->
+                def cardData = entry.cardData
+                [
+                    cardId: cardData.cardId,
+                    name: cardData.name,
+                    imageUrl: cardData.imageUrl,
+                    setName: cardData.setName,
+                    rarity: cardData.rarity,
+                    isNew: entry.isNew
+                ]
+            }
+        }
+
+        user.saldo -= sobreCosto
+        user.save(flush: true, failOnError: true)
+
+        render(view: "sobreAbierto", model: [cards: resultadoFinal, currentUser: user, set: set, setId: setId])
     }
 
     def obtenerCartasPorColeccion(String setId) {

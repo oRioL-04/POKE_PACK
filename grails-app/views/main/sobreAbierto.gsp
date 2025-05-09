@@ -102,8 +102,8 @@ ul {
 
 <ul>
     <li><g:link controller="Main" action="abrirSobres" class="back-button">Volver al menú</g:link></li>
-    <!-- Botón de "Abrir otro sobre" -->
-    <li><a href="#" class="back-button" onclick="window.location.reload(); return false;">Abrir otro sobre</a></li>
+    <!-- Botón de "Abrir otro sobre" con confirmación -->
+
 </ul>
 
 <script>
