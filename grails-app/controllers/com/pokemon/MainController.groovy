@@ -205,14 +205,46 @@ class MainController {
 
         // Sistema de pesos para rarezas
         def rarezaPesos = [
-            "Rare"                     : 40,
-            "Uncommon"                 : 30,
-            "Double Rare"              : 15,
-            "Ultra Rare"               : 10,
-            "Hyper Rare"               : 3,
-            "Special Illustration Rare": 1,
-            "Illustration Rare"        : 1
+            "Uncommon"                   : 40,
+            "Rare"                       : 30,
+            "Rare Holo"                  : 25,
+            "Rare Holo EX"               : 20,
+            "Rare Holo GX"               : 20,
+            "Rare Holo LV.X"             : 20,
+            "Rare Holo Star"             : 15,
+            "Rare Holo V"                : 20,
+            "Rare Holo VMAX"             : 15,
+            "Rare Holo VSTAR"            : 15,
+            "Rare Prime"                 : 15,
+            "Rare Prism Star"            : 10,
+            "Rare Rainbow"               : 5,
+            "Rare Secret"                : 5,
+            "Rare Shining"               : 10,
+            "Rare Shiny"                 : 10,
+            "Rare Shiny GX"              : 8,
+            "Rare Ultra"                 : 5,
+            "Double Rare"                : 15,
+            "Ultra Rare"                 : 10,
+            "Hyper Rare"                 : 5,
+            "Special Illustration Rare"  : 3,
+            "Illustration Rare"          : 3,
+            "Trainer Gallery Rare Holo"  : 10,
+            "Amazing Rare"               : 8,
+            "Radiant Rare"               : 8,
+            "Promo"                      : 20,
+            "Classic Collection"         : 10,
+            "LEGEND"                     : 5,
+            "ACE SPEC Rare"              : 5,
+            "Rare ACE"                   : 5,
+            "Rare BREAK"                 : 10
         ]
+
+        // Asignar probabilidad promedio a rarezas no incluidas en los pesos
+        def rarezasNoIncluidas = cartasRaras.findAll { !rarezaPesos.containsKey(it.rarity) }
+        def probabilidadPromedio = rarezaPesos.values().sum() / rarezaPesos.size()
+        rarezasNoIncluidas.each { carta ->
+            rarezaPesos[carta.rarity] = probabilidadPromedio
+        }
 
         def cartasPorRareza = rarezaPesos.collectEntries { rareza, peso ->
             [(rareza): cartasRaras.findAll { it.rarity == rareza }]
