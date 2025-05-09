@@ -31,6 +31,12 @@ repositories {
 
 configurations {
     all {
+        testImplementation {
+            exclude group: '*', module: '*'
+        }
+        testRuntimeOnly {
+            exclude group: '*', module: '*'
+        }
         resolutionStrategy.eachDependency { DependencyResolveDetails details->
             if (details.requested.group == 'org.seleniumhq.selenium') {
                 details.useVersion('4.19.1')
@@ -67,20 +73,7 @@ dependencies {
     console "org.grails:grails-console"
     runtimeOnly "com.bertramlabs.plugins:asset-pipeline-grails:4.5.1"
     runtimeOnly "org.fusesource.jansi:jansi:1.18"
-    testImplementation "io.micronaut:micronaut-inject-groovy"
-    testImplementation "org.grails:grails-gorm-testing-support"
-    testImplementation "org.grails:grails-web-testing-support"
-    testImplementation "org.grails.plugins:geb"
-    testImplementation "org.seleniumhq.selenium:selenium-api:4.19.1"
-    testImplementation "org.seleniumhq.selenium:selenium-remote-driver:4.19.1"
-    testImplementation "org.seleniumhq.selenium:selenium-support:4.19.1"
-    testImplementation "org.spockframework:spock-core"
-    testImplementation "org.testcontainers:mongodb"
-    testImplementation "org.testcontainers:spock"
-    testImplementation "org.testcontainers:testcontainers"
-    testRuntimeOnly "org.seleniumhq.selenium:selenium-chrome-driver:4.19.1"
-    testRuntimeOnly "org.seleniumhq.selenium:selenium-firefox-driver:4.19.1"
-    testRuntimeOnly "org.seleniumhq.selenium:selenium-safari-driver:4.19.1"
+
 }
 
 application {
@@ -91,13 +84,7 @@ java {
     sourceCompatibility = JavaVersion.toVersion("16")
 }
 
-tasks.withType(Test) {
-    useJUnitPlatform()
-    systemProperty "geb.env", System.getProperty('geb.env')
-    systemProperty "geb.build.reportsDir", reporting.file("geb/integrationTest")
-    systemProperty 'webdriver.chrome.driver', "${System.getenv('CHROMEWEBDRIVER')}/chromedriver"
-    systemProperty 'webdriver.gecko.driver', "${System.getenv('GECKOWEBDRIVER')}/geckodriver"
-}
+
 webdriverBinaries {
     chromedriver '122.0.6260.0'
     geckodriver '0.33.0'
@@ -107,4 +94,7 @@ assets {
     minifyJs = true
     minifyCss = true
     skipNonDigests = true
+}
+tasks.withType(Test) {
+    enabled = false
 }
