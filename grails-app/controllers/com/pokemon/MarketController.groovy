@@ -10,12 +10,28 @@ class MarketController {
         redirect(action: "mercado")
     }
 
+    @Transactional
+    private void handleExpiredListings() {
+        def expiredListings = MarketListing.findAllByExpirationDateLessThan(LocalDateTime.now())
+        expiredListings.each { listing ->
+            def seller = listing.seller
+            def card = Card.findByCardIdAndOwner(listing.cardId, seller)
+            if (card) {
+                card.quantity += 1
+                card.save(flush: true)
+            }
+            listing.delete(flush: true)
+        }
+    }
+
     def mercado() {
         def user = User.get(session.userId)
         if (!user) {
             redirect(controller: "Auth", action: "index")
             return
         }
+
+        handleExpiredListings() // Manejar cartas expiradas antes de cargar el mercado
 
         def listings = MarketListing.findAllByExpirationDateGreaterThan(LocalDateTime.now())
         render(view: "mercado", model: [listings: listings, currentUser: user])
@@ -167,3 +183,4 @@ class MarketController {
         redirect(action: "mercado")
     }
 }
+
