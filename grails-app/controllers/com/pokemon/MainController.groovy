@@ -170,24 +170,16 @@ class MainController {
             return
         }
 
-        if (session.packOpened) {
-            flash.message = "Ya has abierto un sobre. Recarga no permitida."
-            redirect(action: "abrirSobres")
-            return
-        }
-
-        session.packOpened = true
-
         if (user.saldo < sobreCosto) {
             flash.message = "No tienes suficiente saldo para abrir un sobre."
-            redirect(action: "abrirSobres", params: [setId: setId])
+            redirect(action: "abrirSobres")
             return
         }
 
         def set = Set.findBySetId(setId)
         if (!set) {
             flash.message = "El set seleccionado no existe."
-            redirect(action: "abrirSobres", params: [setId: setId])
+            redirect(action: "abrirSobres")
             return
         }
 
@@ -199,15 +191,104 @@ class MainController {
             } catch (Exception e) {
                 log.error("Error al cargar cartas desde la API para el set ${setId}: ${e.message}", e)
                 flash.message = "No se pudieron cargar las cartas del set desde la API."
-                redirect(action: "abrirSobres", params: [setId: setId])
+                redirect(action: "abrirSobres")
                 return
             }
         }
 
-        Collections.shuffle(cartasDelSet)
+        def cartasRaras = cartasDelSet.findAll { it.rarity && it.rarity != "Common" }
+        def cartasComunes = cartasDelSet.findAll { !it.rarity || it.rarity == "Common" }
 
-        def cartasSeleccionadas = cartasDelSet.take(4) // Selecciona 4 cartas aleatorias
+        // Si no hay suficientes cartas comunes o raras, selecciona aleatorias
+        if (cartasComunes.size() < 3 || cartasRaras.isEmpty()) {
+            log.warn("No hay suficientes cartas raras o comunes, seleccionando aleatorias.")
+            Collections.shuffle(cartasDelSet)
+            def cartasSeleccionadas = cartasDelSet.take(4)
 
+            procesarCartasSeleccionadas(cartasSeleccionadas, user, sobreCosto, set)
+            return
+        }
+
+        // Sistema de pesos para rarezas
+        def rarezaPesos = [
+            "Uncommon"                   : 50,
+            "Rare"                       : 45,
+            "Rare Holo"                  : 25,
+            "Rare Holo EX"               : 20,
+            "Rare Holo GX"               : 20,
+            "Rare Holo LV.X"             : 20,
+            "Rare Holo Star"             : 15,
+            "Rare Holo V"                : 20,
+            "Rare Holo VMAX"             : 15,
+            "Rare Holo VSTAR"            : 15,
+            "Rare Prime"                 : 15,
+            "Rare Prism Star"            : 10,
+            "Rare Rainbow"               : 5,
+            "Rare Secret"                : 5,
+            "Rare Shining"               : 10,
+            "Rare Shiny"                 : 10,
+            "Rare Shiny GX"              : 8,
+            "Rare Ultra"                 : 5,
+            "Double Rare"                : 15,
+            "Ultra Rare"                 : 10,
+            "Hyper Rare"                 : 5,
+            "Special Illustration Rare"  : 3,
+            "Illustration Rare"          : 3,
+            "Trainer Gallery Rare Holo"  : 10,
+            "Amazing Rare"               : 8,
+            "Radiant Rare"               : 8,
+            "Promo"                      : 20,
+            "Classic Collection"         : 10,
+            "LEGEND"                     : 5,
+            "ACE SPEC Rare"              : 5,
+            "Rare ACE"                   : 5,
+            "Rare BREAK"                 : 10
+        ]
+
+        // Asignar probabilidad promedio a rarezas no incluidas en los pesos
+        def rarezasNoIncluidas = cartasRaras.findAll { !rarezaPesos.containsKey(it.rarity) }
+        def probabilidadPromedio = rarezaPesos.values().sum() / rarezaPesos.size()
+        rarezasNoIncluidas.each { carta ->
+            rarezaPesos[carta.rarity] = probabilidadPromedio
+        }
+
+        def cartasPorRareza = rarezaPesos.collectEntries { rareza, peso ->
+            [(rareza): cartasRaras.findAll { it.rarity == rareza }]
+        }
+
+        def rarezaPesosActualizados = cartasPorRareza.findAll { it.value && !it.value.isEmpty() }
+        if (rarezaPesosActualizados.isEmpty()) {
+            log.warn("No hay cartas raras disponibles, seleccionando aleatorias.")
+            Collections.shuffle(cartasDelSet)
+            def cartasSeleccionadas = cartasDelSet.take(4)
+
+            procesarCartasSeleccionadas(cartasSeleccionadas, user, sobreCosto, set)
+            return
+        }
+
+        def totalPeso = rarezaPesosActualizados.collect { rareza, cartas ->
+            rarezaPesos[rareza]
+        }.sum()
+
+        def randomPeso = new Random().nextInt(totalPeso) + 1
+        def rarezaSeleccionada = rarezaPesosActualizados.find { rareza, cartas ->
+            randomPeso -= rarezaPesos[rareza]
+            randomPeso <= 0
+        }?.key
+
+        def cartasDeRarezaSeleccionada = cartasPorRareza[rarezaSeleccionada]
+        Collections.shuffle(cartasDeRarezaSeleccionada)
+        def cartaRaraSeleccionada = cartasDeRarezaSeleccionada.first()
+
+        Collections.shuffle(cartasComunes)
+        def cartasComunesSeleccionadas = cartasComunes.take(3)
+
+        def cartasSeleccionadas = cartasComunesSeleccionadas + cartaRaraSeleccionada
+
+        procesarCartasSeleccionadas(cartasSeleccionadas, user, sobreCosto, set)
+    }
+
+    private void procesarCartasSeleccionadas(def cartasSeleccionadas, def user, def sobreCosto, def set) {
         def cartasConEstado = cartasSeleccionadas.collect { cardData ->
             def yaExiste = Card.findByCardIdAndOwnerAndUsername(cardData.cardId, user, user.username)
             if (yaExiste) {
@@ -246,9 +327,8 @@ class MainController {
             ]
         }
 
-        render(view: "sobreAbierto", model: [cards: resultado, currentUser: user, set: set, setId: setId])
+        render(view: "sobreAbierto", model: [cards: resultado, currentUser: user, set: set])
     }
-
     def abrirDiezSobres(String setId) {
         if (session.tenPacksOpened) {
             flash.message = "Ya has abierto 10 sobres. Recarga no permitida."
@@ -280,50 +360,37 @@ class MainController {
         }
 
         def cartasDelSet = AllCards.findAllBySetName(set.name)
-        if (!cartasDelSet || cartasDelSet.size() < 10) {
-            flash.message = "No hay suficientes cartas en este set para abrir 10 sobres. Por favor, abre sobres individuales."
-            redirect(action: "abrirSobres", params: [setId: setId])
-            return
+        if (!cartasDelSet || cartasDelSet.isEmpty()) {
+            try {
+                cargarCartasDeSet(setId)
+                cartasDelSet = AllCards.findAllBySetName(set.name)
+            } catch (Exception e) {
+                log.error("Error al cargar cartas desde la API para el set ${setId}: ${e.message}", e)
+                flash.message = "No se pudieron cargar las cartas del set desde la API."
+                redirect(action: "abrirSobres", params: [setId: setId])
+                return
+            }
         }
+
+        def cartasRaras = cartasDelSet.findAll { it.rarity && it.rarity != "Common" }
+        def cartasComunes = cartasDelSet.findAll { !it.rarity || it.rarity == "Common" }
 
         def resultadoFinal = []
         10.times {
-            Collections.shuffle(cartasDelSet)
-            def cartasSeleccionadas = cartasDelSet.take(4) // Selecciona 4 cartas aleatorias
+            if (cartasComunes.size() < 3 || cartasRaras.isEmpty()) {
+                log.warn("No hay suficientes cartas raras o comunes, seleccionando aleatorias.")
+                Collections.shuffle(cartasDelSet)
+                def cartasSeleccionadas = cartasDelSet.take(4)
+                resultadoFinal += procesarCartasSeleccionadas(cartasSeleccionadas, user)
+            } else {
+                Collections.shuffle(cartasComunes)
+                def cartasComunesSeleccionadas = cartasComunes.take(3)
 
-            def cartasConEstado = cartasSeleccionadas.collect { cardData ->
-                def yaExiste = Card.findByCardIdAndOwnerAndUsername(cardData.cardId, user, user.username)
-                if (yaExiste) {
-                    yaExiste.quantity += 1
-                    yaExiste.save(flush: true, failOnError: true)
-                } else {
-                    def newCard = new Card(
-                        cardId: cardData.cardId,
-                        name: cardData.name,
-                        imageUrl: cardData.imageUrl,
-                        setName: cardData.setName,
-                        username: user.username,
-                        owner: user,
-                        quantity: 1
-                    )
-                    newCard.save(flush: true, failOnError: true)
-                }
-                [
-                    cardData: cardData,
-                    isNew: !yaExiste
-                ]
-            }
+                Collections.shuffle(cartasRaras)
+                def cartaRaraSeleccionada = cartasRaras.first()
 
-            resultadoFinal += cartasConEstado.collect { entry ->
-                def cardData = entry.cardData
-                [
-                    cardId: cardData.cardId,
-                    name: cardData.name,
-                    imageUrl: cardData.imageUrl,
-                    setName: cardData.setName,
-                    rarity: cardData.rarity,
-                    isNew: entry.isNew
-                ]
+                def cartasSeleccionadas = cartasComunesSeleccionadas + cartaRaraSeleccionada
+                resultadoFinal += procesarCartasSeleccionadas(cartasSeleccionadas, user)
             }
         }
 
@@ -331,6 +398,35 @@ class MainController {
         user.save(flush: true, failOnError: true)
 
         render(view: "sobreAbierto", model: [cards: resultadoFinal, currentUser: user, set: set, setId: setId])
+    }
+
+    private List procesarCartasSeleccionadas(def cartasSeleccionadas, def user) {
+        return cartasSeleccionadas.collect { cardData ->
+            def yaExiste = Card.findByCardIdAndOwnerAndUsername(cardData.cardId, user, user.username)
+            if (yaExiste) {
+                yaExiste.quantity += 1
+                yaExiste.save(flush: true, failOnError: true)
+            } else {
+                def newCard = new Card(
+                    cardId: cardData.cardId,
+                    name: cardData.name,
+                    imageUrl: cardData.imageUrl,
+                    setName: cardData.setName,
+                    username: user.username,
+                    owner: user,
+                    quantity: 1
+                )
+                newCard.save(flush: true, failOnError: true)
+            }
+            [
+                cardId: cardData.cardId,
+                name: cardData.name,
+                imageUrl: cardData.imageUrl,
+                setName: cardData.setName,
+                rarity: cardData.rarity,
+                isNew: !yaExiste
+            ]
+        }
     }
 
     def obtenerCartasPorColeccion(String setId) {

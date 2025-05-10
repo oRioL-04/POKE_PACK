@@ -3,49 +3,51 @@
 <style>
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Increase card size */
-    gap: 30px; /* Add more spacing between cards */
-    padding: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Increase card size */
+    gap: 20px; /* Add more spacing between cards */
+    padding: 10px;
 }
 .set-card {
     background-color: white;
-    padding: 20px;
+    padding: 10px; /* Reducir padding */
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     text-align: center;
     display: flex;
-    flex-direction: column; /* Ensure proper stacking of elements */
+    flex-direction: column;
     align-items: center;
-    gap: 10px; /* Add spacing between elements inside the card */
-    position: relative; /* For positioning the favorite star */
+    gap: 5px; /* Reducir espacio entre elementos */
+    position: relative;
+    overflow: hidden; /* Evitar desbordamiento */
 }
 .set-card img {
     width: 100%;
-    height: 200px; /* Increase image height */
+    height: 150px; /* Reducir altura de la imagen */
     object-fit: contain;
 }
 .set-card a {
-    margin-top: 10px;
+    margin-top: 5px;
     background-color: #ffcb05;
-    padding: 10px 15px; /* Adjust padding for better button size */
+    padding: 8px 10px; /* Ajustar padding */
     border-radius: 8px;
     text-decoration: none;
     font-weight: bold;
     color: #333;
     display: inline-block;
-    width: 100%; /* Make buttons occupy the same width */
+    width: 90%; /* Evitar que los botones se salgan */
     text-align: center;
+    box-sizing: border-box; /* Incluir padding en el ancho */
 }
 .set-card .favorite-button {
-    font-size: 24px;
+    font-size: 20px; /* Reducir tamaño del ícono */
     color: gray;
     background: none;
     border: none;
     cursor: pointer;
     transition: color 0.3s ease;
-    position: absolute; /* Position the star in the top-right corner */
-    top: 10px;
-    right: 10px;
+    position: absolute;
+    top: 5px; /* Ajustar posición */
+    right: 5px;
 }
 .set-card .favorite-button.active {
     color: gold;
