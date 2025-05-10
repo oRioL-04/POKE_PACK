@@ -75,7 +75,7 @@ class MainController {
             return
         }
 
-        def allSets = Set.list()
+        def allSets = Set.list(sort: "isFavorite", order: "desc") // Ordena por favoritos primero
 
         def sets = allSets.collect { set ->
             def totalCards = set.totalCards ?: 0
@@ -85,7 +85,8 @@ class MainController {
                 id: set.setId,
                 name: set.name,
                 logoUrl: set.logoUrl ?: '/images/default.png',
-                percentage: percentage.toString().replace(".0", "") // Formatea el porcentaje
+                percentage: percentage.toString().replace(".0", ""),
+                isFavorite: set.isFavorite
             ]
         }
 
@@ -169,14 +170,13 @@ class MainController {
             return
         }
 
-        // Redirect to "sobres" if a pack has already been opened
         if (session.packOpened) {
             flash.message = "Ya has abierto un sobre. Recarga no permitida."
             redirect(action: "abrirSobres")
             return
         }
 
-        session.packOpened = true // Mark the pack as opened
+        session.packOpened = true
 
         if (user.saldo < sobreCosto) {
             flash.message = "No tienes suficiente saldo para abrir un sobre."
@@ -204,23 +204,9 @@ class MainController {
             }
         }
 
-        def cartasRaras = cartasDelSet.findAll { it.rarity && it.rarity != "Common" }
-        def cartasComunes = cartasDelSet.findAll { !it.rarity || it.rarity == "Common" }
+        Collections.shuffle(cartasDelSet)
 
-        if (cartasRaras.isEmpty() || cartasComunes.size() < 3) {
-            log.error("No hay suficientes cartas raras o comunes disponibles para el set ${setId}.")
-            flash.message = "No hay suficientes cartas disponibles para este set."
-            redirect(action: "abrirSobres", params: [setId: setId])
-            return
-        }
-
-        Collections.shuffle(cartasRaras)
-        Collections.shuffle(cartasComunes)
-
-        def cartaRaraSeleccionada = cartasRaras.first()
-        def cartasComunesSeleccionadas = cartasComunes.take(3)
-
-        def cartasSeleccionadas = cartasComunesSeleccionadas + cartaRaraSeleccionada
+        def cartasSeleccionadas = cartasDelSet.take(4) // Selecciona 4 cartas aleatorias
 
         def cartasConEstado = cartasSeleccionadas.collect { cardData ->
             def yaExiste = Card.findByCardIdAndOwnerAndUsername(cardData.cardId, user, user.username)
@@ -270,10 +256,10 @@ class MainController {
             return
         }
 
-        session.tenPacksOpened = true // Mark the 10 packs as opened
+        session.tenPacksOpened = true // Marca los 10 sobres como abiertos
 
         def user = User.get(session.userId)
-        def sobreCosto = 50.0 * 10 // Cost for 10 packs
+        def sobreCosto = 50.0 * 10 // Costo de 10 sobres
 
         if (!user) {
             redirect(controller: "Auth", action: "index")
@@ -294,37 +280,16 @@ class MainController {
         }
 
         def cartasDelSet = AllCards.findAllBySetName(set.name)
-        if (!cartasDelSet || cartasDelSet.isEmpty()) {
-            try {
-                cargarCartasDeSet(setId)
-                cartasDelSet = AllCards.findAllBySetName(set.name)
-            } catch (Exception e) {
-                log.error("Error al cargar cartas desde la API para el set ${setId}: ${e.message}", e)
-                flash.message = "No se pudieron cargar las cartas del set desde la API."
-                redirect(action: "abrirSobres", params: [setId: setId])
-                return
-            }
+        if (!cartasDelSet || cartasDelSet.size() < 10) {
+            flash.message = "No hay suficientes cartas en este set para abrir 10 sobres. Por favor, abre sobres individuales."
+            redirect(action: "abrirSobres", params: [setId: setId])
+            return
         }
 
         def resultadoFinal = []
         10.times {
-            def cartasRaras = cartasDelSet.findAll { it.rarity && it.rarity != "Common" }
-            def cartasComunes = cartasDelSet.findAll { !it.rarity || it.rarity == "Common" }
-
-            if (cartasRaras.isEmpty() || cartasComunes.size() < 3) {
-                log.error("No hay suficientes cartas raras o comunes disponibles para el set ${setId}.")
-                flash.message = "No hay suficientes cartas disponibles para este set."
-                redirect(action: "abrirSobres", params: [setId: setId])
-                return
-            }
-
-            Collections.shuffle(cartasRaras)
-            Collections.shuffle(cartasComunes)
-
-            def cartaRaraSeleccionada = cartasRaras.first()
-            def cartasComunesSeleccionadas = cartasComunes.take(3)
-
-            def cartasSeleccionadas = cartasComunesSeleccionadas + cartaRaraSeleccionada
+            Collections.shuffle(cartasDelSet)
+            def cartasSeleccionadas = cartasDelSet.take(4) // Selecciona 4 cartas aleatorias
 
             def cartasConEstado = cartasSeleccionadas.collect { cardData ->
                 def yaExiste = Card.findByCardIdAndOwnerAndUsername(cardData.cardId, user, user.username)

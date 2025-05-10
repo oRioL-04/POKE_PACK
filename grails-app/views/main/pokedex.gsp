@@ -20,7 +20,7 @@
     }
     .set-card img {
         width: 100%;
-        height: 180px; /* Ajuste para que todas las imágenes tengan el mismo tamaño */
+        height: 180px;
         object-fit: contain;
     }
     .set-card {
@@ -31,22 +31,46 @@
         text-align: center;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
-        height: 300px; /* Incremento de altura para evitar que los botones se salgan */
+        align-items: center;
+        gap: 10px;
+        position: relative;
+        min-width: 180px; /* Ancho mínimo */
+        max-width: 200px; /* Ancho máximo */
+        box-sizing: border-box; /* Asegura que el padding no afecte el tamaño */
+    }
+
+    .set-card a {
+        margin-top: 10px;
+        background-color: #ffcb05;
+        padding: 10px 15px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        color: #333;
+        display: block; /* Cambiar a block para ocupar todo el ancho */
+        width: 100%; /* Asegura que los botones ocupen el mismo ancho */
+        text-align: center;
+        box-sizing: border-box; /* Evita desbordamientos */
     }
     .set-card small {
         margin-top: auto;
         color: #666;
         font-size: 0.9rem;
     }
-    .set-card a {
-        margin-top: 10px;
-        background-color: #ffcb05;
-        padding: 8px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: bold;
-        color: #333;
+
+    .favorite-icon {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: transparent;
+        border: none;
+        font-size: 1.5rem;
+        color: #ccc;
+        cursor: pointer;
+        transition: color 0.3s ease;
+    }
+    .favorite-icon.favorite {
+        color: #ffcb05;
     }
 </style>
 
@@ -57,6 +81,9 @@
 <div class="grid" id="setGrid">
     <g:each in="${sets}" var="set">
         <div class="set-card">
+            <button class="favorite-icon ${set.isFavorite ? 'favorite' : ''}" data-set-id="${set.id}">
+                ★
+            </button>
             <img src="${set.logoUrl}" alt="${set.name}" onerror="this.src='/images/default.png'"/>
             <p class="set-name">${set.name}</p>
             <small>${set.percentage}% completado</small>
@@ -73,15 +100,37 @@
         const setGrid = document.getElementById("setGrid");
         const setCards = setGrid.querySelectorAll(".set-card");
 
+        // Función de búsqueda
         searchInput.addEventListener("input", function () {
             const query = searchInput.value.toLowerCase();
             setCards.forEach(card => {
                 const setName = card.querySelector(".set-name").textContent.toLowerCase();
-                if (setName.includes(query)) {
-                    card.style.display = "flex"; // Muestra el elemento
-                } else {
-                    card.style.display = "none"; // Oculta el elemento
-                }
+                card.style.display = setName.includes(query) ? "flex" : "none";
+            });
+        });
+
+        // Función para marcar como favorito
+        const favoriteIcons = document.querySelectorAll(".favorite-icon");
+        favoriteIcons.forEach(icon => {
+            icon.addEventListener("click", function () {
+                const setId = this.getAttribute("data-set-id");
+
+                fetch("${createLink(controller: 'Main', action: 'toggleFavorite')}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ setId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        this.classList.toggle("favorite", data.isFavorite);
+                    } else {
+                        alert(data.message || "Error al marcar como favorito.");
+                    }
+                })
+                .catch(error => console.error("Error:", error));
             });
         });
     });
