@@ -124,7 +124,7 @@
                 <input type="number" id="price-${card.cardId}" name="price" min="1" required />
                 <label for="duration-${card.cardId}">Duración:</label>
                 <select id="duration-${card.cardId}" name="duration">
-                    <option value="1">1 minutos</option>
+                    <option value="5">5 minutos</option>
                     <option value="10">10 minutos</option>
                     <option value="15">15 minutos</option>
                 </select>

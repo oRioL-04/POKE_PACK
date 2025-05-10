@@ -109,8 +109,39 @@
 <div style="display: flex; justify-content: center; margin-top: 20px;">
     <g:link controller="Main" action="pokedex" class="back-button">Volver a la Pokédex</g:link>
 </div>
+<!-- Modal para mostrar la imagen en grande -->
+<div id="imageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000;">
+    <span id="closeModal" style="position: absolute; top: 20px; right: 20px; font-size: 2rem; color: white; cursor: pointer;">&times;</span>
+    <img id="modalImage" src="" alt="Carta" style="max-width: 90%; max-height: 90%; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);" />
+</div>
 
 <script>
+document.addEventListener("DOMContentLoaded", function () {
+    const modal = document.getElementById("imageModal");
+    const modalImage = document.getElementById("modalImage");
+    const closeModal = document.getElementById("closeModal");
+
+    // Agregar evento a todas las imágenes de las cartas
+    document.querySelectorAll(".card-slot img").forEach(img => {
+        img.addEventListener("click", function () {
+            modalImage.src = this.src; // Establecer la imagen en el modal
+            modal.style.display = "flex"; // Mostrar el modal
+        });
+    });
+
+    // Cerrar el modal al hacer clic en la "X"
+    closeModal.addEventListener("click", function () {
+        modal.style.display = "none";
+    });
+
+    // Cerrar el modal al hacer clic fuera de la imagen
+    modal.addEventListener("click", function (e) {
+        if (e.target === modal) {
+            modal.style.display = "none";
+        }
+    });
+});
+
 document.addEventListener("DOMContentLoaded", function () {
     const searchInput = document.getElementById("searchInput");
     const cards = document.querySelectorAll(".card-slot");
