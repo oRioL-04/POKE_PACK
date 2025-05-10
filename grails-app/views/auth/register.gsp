@@ -49,8 +49,17 @@
         font-weight: bold;
         color: #555;
     }
+    .error-message {
+        color: red;
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+        text-align: center;
+    }
 </style>
 <div class="login-form">
+    <g:if test="${flash.message}">
+        <div class="error-message">${flash.message}</div>
+    </g:if>
     <g:form action="saveUser">
         <label>Usuario:</label><br/>
         <input type="text" name="username" placeholder="Ingresa tu usuario"/><br/>

@@ -20,7 +20,7 @@
     }
     .set-card img {
         width: 100%;
-        height: 150px;
+        height: 180px; /* Ajuste para que todas las imágenes tengan el mismo tamaño */
         object-fit: contain;
     }
     .set-card {
@@ -32,7 +32,7 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        height: 250px;
+        height: 300px; /* Incremento de altura para evitar que los botones se salgan */
     }
     .set-card small {
         margin-top: auto;
