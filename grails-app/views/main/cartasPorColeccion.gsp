@@ -69,25 +69,6 @@
     border-radius: 5px;
 }
 
-/* Estilos para el modal */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    justify-content: center;
-    align-items: center;
-}
-.modal img {
-    max-width: 90%;
-    max-height: 90%;
-    border-radius: 10px;
-}
-
 /* Estilo del buscador */
 .search-bar {
     margin: 20px auto;
@@ -125,63 +106,21 @@
     </g:each>
 </div>
 
-<!-- Modal para configurar la venta -->
-<div class="modal" id="sellModal">
-    <div class="modal-content">
-        <h3>Configurar venta</h3>
-        <form id="sellForm">
-            <input type="hidden" id="sellCardId" name="cardId" />
-            <label for="price">Precio:</label>
-            <input type="number" id="price" name="price" min="1" required />
-            <label for="duration">Duración:</label>
-            <select id="duration" name="duration">
-                <option value="1">1 día</option>
-                <option value="3">3 días</option>
-                <option value="7">7 días</option>
-            </select>
-            <button type="submit">Confirmar</button>
-        </form>
-    </div>
-</div>
-
 <div style="display: flex; justify-content: center; margin-top: 20px;">
     <g:link controller="Main" action="pokedex" class="back-button">Volver a la Pokédex</g:link>
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const modal = document.getElementById("sellModal");
-    const sellForm = document.getElementById("sellForm");
-    const sellCardIdInput = document.getElementById("sellCardId");
-    const sellButtons = document.querySelectorAll(".sell-button");
+    const searchInput = document.getElementById("searchInput");
+    const cards = document.querySelectorAll(".card-slot");
 
-    sellButtons.forEach(button => {
-        button.addEventListener("click", function () {
-            sellCardIdInput.value = this.dataset.cardId; // Asigna el cardId al formulario
-            modal.style.display = "flex";
+    searchInput.addEventListener("input", function () {
+        const searchValue = searchInput.value.toLowerCase();
+        cards.forEach(card => {
+            const name = card.getAttribute("data-name");
+            card.style.display = name.includes(searchValue) ? "" : "none";
         });
-    });
-
-    sellForm.addEventListener("submit", function (e) {
-        e.preventDefault();
-        fetch("/market/sell", {
-            method: "POST",
-            body: new URLSearchParams(new FormData(sellForm)),
-            headers: { "Content-Type": "application/x-www-form-urlencoded" }
-        }).then(response => {
-            if (response.ok) {
-                modal.style.display = "none";
-                location.reload(); // Recarga la página si la venta fue exitosa
-            } else {
-                alert("Error al realizar la venta.");
-            }
-        });
-    });
-
-    modal.addEventListener("click", function (e) {
-        if (e.target === modal) {
-            modal.style.display = "none";
-        }
     });
 });
 </script>

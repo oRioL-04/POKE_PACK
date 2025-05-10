@@ -28,10 +28,16 @@ class MarketController {
             return
         }
 
-        // Agrupa las cartas por set y filtra las que tienen más de 1 en cantidad
-        def setsWithCards = user.cards?.findAll { it.quantity > 1 }?.groupBy { it.setName } ?: [:]
+        // Obtener todos los sets disponibles
+        def availableSets = user.cards?.collect { it.setName }?.unique() ?: []
 
-        render(view: "venderCarta", model: [setsWithCards: setsWithCards, currentUser: user])
+        // Filtrar cartas por set seleccionado
+        def selectedSet = params.setName
+        def filteredCards = user.cards?.findAll {
+            it.quantity > 1 && (!selectedSet || it.setName == selectedSet)
+        } ?: []
+
+        render(view: "venderCarta", model: [availableSets: availableSets, filteredCards: filteredCards, currentUser: user])
     }
 
     def getCardsBySet(String setName) {
@@ -61,8 +67,8 @@ class MarketController {
 
         def card = Card.findByCardIdAndOwner(params.cardId, User.get(session.userId))
         if (card && card.quantity > 1) {
-            def durationDays = params.int('duration') ?: 1
-            def expirationDate = LocalDateTime.now().plusDays(durationDays)
+            def durationMinutes = params.int('duration') ?: 5
+            def expirationDate = LocalDateTime.now().plusMinutes(durationMinutes)
 
             def listing = new MarketListing(
                 cardId: card.cardId,
@@ -82,7 +88,7 @@ class MarketController {
             flash.message = "No se puede vender esta carta. Cantidad insuficiente."
         }
 
-        redirect(action: "venderCarta")
+        redirect(action: "mercado") // Redirige a mercado tras completar la venta
     }
 
     def buy(String cardId) {
