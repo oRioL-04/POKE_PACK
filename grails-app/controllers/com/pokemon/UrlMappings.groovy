@@ -16,6 +16,13 @@ class UrlMappings {
         "/trade/list"(controller: "trade", action: "listarSolicitudes")
         "/trade/mostrarFormularioIntercambio"(controller: "trade", action: "mostrarFormularioIntercambio")
         "/trade/solicitudesPendientes"(controller: "trade", action: "listarSolicitudes")
+        "/market/sell"(controller: "market", action: "sell")
+        "/market/buy/$cardId"(controller: "market", action: "buy", method: "POST")
+        "/market"(controller: "market", action: "index")
+        "/market/mercado"(controller: "market", action: "mercado")
+        "/market/venderCarta"(controller: "market", action: "venderCarta")
+        "/api/cardsBySet"(controller: "market", action: "getCardsBySet")
 
     }
 }
+

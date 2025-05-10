@@ -125,9 +125,23 @@
     </g:each>
 </div>
 
-<!-- Modal para mostrar la imagen ampliada -->
-<div class="modal" id="imageModal">
-    <img id="modalImage" src="" alt="Imagen ampliada"/>
+<!-- Modal para configurar la venta -->
+<div class="modal" id="sellModal">
+    <div class="modal-content">
+        <h3>Configurar venta</h3>
+        <form id="sellForm">
+            <input type="hidden" id="sellCardId" name="cardId" />
+            <label for="price">Precio:</label>
+            <input type="number" id="price" name="price" min="1" required />
+            <label for="duration">Duración:</label>
+            <select id="duration" name="duration">
+                <option value="1">1 día</option>
+                <option value="3">3 días</option>
+                <option value="7">7 días</option>
+            </select>
+            <button type="submit">Confirmar</button>
+        </form>
+    </div>
 </div>
 
 <div style="display: flex; justify-content: center; margin-top: 20px;">
@@ -136,33 +150,38 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const modal = document.getElementById("imageModal");
-    const modalImage = document.getElementById("modalImage");
-    const images = document.querySelectorAll(".clickable-image");
-    const searchInput = document.getElementById("searchInput");
-    const cardSlots = document.querySelectorAll(".card-slot");
+    const modal = document.getElementById("sellModal");
+    const sellForm = document.getElementById("sellForm");
+    const sellCardIdInput = document.getElementById("sellCardId");
+    const sellButtons = document.querySelectorAll(".sell-button");
 
-    images.forEach(image => {
-        image.addEventListener("click", function () {
-            modalImage.src = this.src;
+    sellButtons.forEach(button => {
+        button.addEventListener("click", function () {
+            sellCardIdInput.value = this.dataset.cardId; // Asigna el cardId al formulario
             modal.style.display = "flex";
         });
     });
 
-    modal.addEventListener("click", function () {
-        modal.style.display = "none";
-    });
-
-    searchInput.addEventListener("input", function () {
-        const query = this.value.toLowerCase();
-        cardSlots.forEach(slot => {
-            const name = slot.getAttribute("data-name");
-            if (name.includes(query)) {
-                slot.style.display = "flex";
+    sellForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        fetch("/market/sell", {
+            method: "POST",
+            body: new URLSearchParams(new FormData(sellForm)),
+            headers: { "Content-Type": "application/x-www-form-urlencoded" }
+        }).then(response => {
+            if (response.ok) {
+                modal.style.display = "none";
+                location.reload(); // Recarga la página si la venta fue exitosa
             } else {
-                slot.style.display = "none";
+                alert("Error al realizar la venta.");
             }
         });
+    });
+
+    modal.addEventListener("click", function (e) {
+        if (e.target === modal) {
+            modal.style.display = "none";
+        }
     });
 });
 </script>

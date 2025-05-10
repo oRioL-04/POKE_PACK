@@ -45,5 +45,6 @@
     <li><g:link controller="Main" action="abrirSobres">Abrir sobres</g:link></li>
     <li><g:link controller="Battle" action="selectTeam">Combate</g:link></li>
     <li><g:link controller="trade" action="intercambios">Intercambios</g:link></li>
+    <li><g:link controller="market" action="mercado">Mercado</g:link></li>
 
 </ul>

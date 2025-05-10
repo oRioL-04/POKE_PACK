@@ -134,6 +134,7 @@
                 <g:link controller="main" action="pokedex">Mi Pokédex</g:link>
                 <g:link controller="battle" action="selectTeam">Combate</g:link>
                 <g:link controller="trade" action="intercambios">Intercambio</g:link>
+                <g:link controller="market" action="mercado">Mercado</g:link>
             </g:if>
         </div>
         <g:if test="${currentUser}">
